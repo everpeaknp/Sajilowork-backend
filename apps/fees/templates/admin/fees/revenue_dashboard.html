@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Platform fee revenue</h1>
+<p><strong>Total applied fees:</strong> NPR {{ total }}</p>
+<h2>By fee type</h2>
+<table>
+  <thead>
+    <tr><th>Type</th><th>Total (NPR)</th></tr>
+  </thead>
+  <tbody>
+    {% for row in by_type %}
+    <tr>
+      <td>{{ row.fee_type }}</td>
+      <td>{{ row.total }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="2">No applied fees yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<h2>Recent fee transactions</h2>
+<ul>
+  {% for tx in recent %}
+  <li>{{ tx.created_at }} — {{ tx.fee_type }} {{ tx.fee_amount }} ({{ tx.status }})</li>
+  {% empty %}
+  <li>No transactions.</li>
+  {% endfor %}
+</ul>
+<p><a href="{% url 'admin:fees_feetransaction_changelist' %}">Back to fee log</a></p>
+{% endblock %}

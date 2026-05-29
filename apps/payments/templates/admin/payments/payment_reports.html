@@ -1,0 +1,161 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {% include "admin/includes/tn_dashboard_head.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="tn-analytics">
+  <header class="tn-analytics__hero tn-analytics__hero--violet">
+    <div>
+      <h1>{{ title }}</h1>
+      <p class="tn-analytics__hero-meta">{{ period_label }} · {{ currency }}</p>
+    </div>
+    <div class="tn-analytics__hero-actions">
+      <form class="tn-analytics__period-form" method="get" action="">
+        <label for="tn-days">Period</label>
+        <select name="days" id="tn-days">
+          {% for value, label in period_choices %}
+          <option value="{{ value }}" {% if selected_days == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="tn-analytics__btn tn-analytics__btn--primary">Apply</button>
+      </form>
+      <a class="tn-analytics__btn tn-analytics__btn--ghost" href="{% url 'admin:payments_payment_changelist' %}">← Payments</a>
+    </div>
+  </header>
+
+  {% include "admin/includes/tn_dashboard_nav.html" %}
+
+  <div class="tn-analytics__kpi-grid">
+    {% for kpi in kpis %}
+    <article class="tn-analytics__kpi">
+      <span class="tn-analytics__kpi-label">{{ kpi.label }}</span>
+      <span class="tn-analytics__kpi-value">{{ kpi.value }}</span>
+      <span class="tn-analytics__kpi-hint">{{ kpi.hint }}</span>
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="tn-analytics__charts">
+    <section class="tn-analytics__chart-card">
+      <h2>Payments by status ({{ currency }})</h2>
+      <div class="tn-analytics__chart-wrap">
+        <canvas id="chartPayStatus" aria-label="Payments by status"></canvas>
+      </div>
+    </section>
+    <section class="tn-analytics__chart-card">
+      <h2>Payments by method ({{ currency }})</h2>
+      <div class="tn-analytics__chart-wrap">
+        <canvas id="chartPayMethod" aria-label="Payments by method"></canvas>
+      </div>
+    </section>
+    <section class="tn-analytics__chart-card">
+      <h2>Escrow by status ({{ currency }})</h2>
+      <div class="tn-analytics__chart-wrap">
+        <canvas id="chartEscrow" aria-label="Escrow breakdown"></canvas>
+      </div>
+    </section>
+    <section class="tn-analytics__chart-card">
+      <h2>Financial summary ({{ period_label }})</h2>
+      <div class="tn-analytics__chart-wrap tn-analytics__chart-wrap--sm">
+        <canvas id="chartFinancial" aria-label="Revenue fees refunds payouts"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <div class="tn-analytics__panels">
+    <section class="tn-analytics__panel">
+      <h2>Payments by status</h2>
+      <table class="tn-analytics__table">
+        <thead>
+          <tr><th>Status</th><th>Count</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          {% for row in by_status %}
+          <tr>
+            <td>{{ row.status }}</td>
+            <td class="tn-num">{{ row.count }}</td>
+            <td class="tn-num">{{ row.total|default:"0" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3">No payments in this period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    <section class="tn-analytics__panel">
+      <h2>Payments by method</h2>
+      <table class="tn-analytics__table">
+        <thead>
+          <tr><th>Method</th><th>Count</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          {% for row in by_method %}
+          <tr>
+            <td>{{ row.payment_method|default:"—" }}</td>
+            <td class="tn-num">{{ row.count }}</td>
+            <td class="tn-num">{{ row.total|default:"0" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3">No payments.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    <section class="tn-analytics__panel">
+      <h2>Escrow by status</h2>
+      <table class="tn-analytics__table">
+        <thead>
+          <tr><th>Status</th><th>Count</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          {% for row in escrow_summary %}
+          <tr>
+            <td>{{ row.status }}</td>
+            <td class="tn-num">{{ row.count }}</td>
+            <td class="tn-num">{{ row.total|default:"0" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3">No escrow records.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <section class="tn-analytics__panel">
+    <h2>Recent payments</h2>
+    <div class="tn-analytics__activity">
+      <ul>
+        {% for p in recent %}
+        <li>
+          <a href="{% url 'admin:payments_payment_change' p.pk %}">Payment #{{ p.id }}</a>
+          <span class="tn-time">{{ p.status }} · {{ currency }} {{ p.amount }} · {{ p.created_at|date:"M j, H:i" }}</span><br>
+          {{ p.payer.email }} → {% if p.payee %}{{ p.payee.email }}{% else %}—{% endif %}
+        </li>
+        {% empty %}
+        <li>No recent payments.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+</div>
+
+{{ charts|json_script:"tn-charts-data" }}
+{% endblock %}
+
+{% block extrajs %}
+  {{ block.super }}
+  {% include "admin/includes/tn_dashboard_charts_lib.html" %}
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const c = TNCharts.read("tn-charts-data");
+    TNCharts.doughnut("chartPayStatus", c.by_status.labels, c.by_status.values);
+    TNCharts.doughnut("chartPayMethod", c.by_method.labels, c.by_method.values);
+    TNCharts.bar("chartEscrow", c.escrow.labels, c.escrow.values, true);
+    TNCharts.bar("chartFinancial", c.financial.labels, c.financial.values, false);
+  });
+  </script>
+{% endblock %}

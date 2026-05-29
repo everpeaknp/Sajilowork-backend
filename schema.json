@@ -1,0 +1,161 @@
+openapi: 3.0.3
+info:
+  title: tasknepal API
+  version: 1.0.0
+  description: "# tasknepal REST API\n\nMarketplace API for **web** (Next.js), **mobile**\
+    \ (iOS/Android), and admin tools.\n\nAll business routes are under **`/api/v1/`**.\
+    \ Currency is **NPR** unless noted otherwise.\n\n---\n\n## Base URLs\n\n| Environment\
+    \ | Base URL |\n|-------------|----------|\n| Local | `http://localhost:8000/api/v1`\
+    \ |\n| Production | Set `NEXT_PUBLIC_API_BASE_URL` / app config to your deployed\
+    \ host + `/api/v1` |\n\nInteractive docs (this page): `http://localhost:8000/api/docs/`\
+    \  \nReDoc (readable reference): `http://localhost:8000/api/redoc/`  \nOpenAPI\
+    \ JSON: `http://localhost:8000/api/schema/`\n\n---\n\n## Authentication (JWT)\n\
+    \nMost endpoints require a **Bearer** access token.\n\n### 1. Obtain tokens\n\n\
+    **Option A — Simple login (recommended for apps)**\n\n```http\nPOST /api/v1/auth/login/\n\
+    Content-Type: application/json\n\n{\n  \"email\": \"user@example.com\",\n  \"\
+    password\": \"your-password\"\n}\n```\n\n**Response (200):**\n\n```json\n{\n \
+    \ \"access\": \"<JWT access token>\",\n  \"refresh\": \"<JWT refresh token>\"\
+    ,\n  \"user\": { \"id\": \"...\", \"email\": \"...\", \"role\": \"tasker\" }\n\
+    }\n```\n\n**Option B — Standard JWT pair**\n\n```http\nPOST /api/v1/auth/token/\n\
+    Content-Type: application/json\n\n{ \"email\": \"...\", \"password\": \"...\"\
+    \ }\n```\n\n### 2. Use the access token\n\n```http\nGET /api/v1/users/me/\nAuthorization:\
+    \ Bearer <access>\n```\n\n### 3. Refresh when expired (access ~1 hour)\n\n```http\n\
+    POST /api/v1/auth/token/refresh/\nContent-Type: application/json\n\n{ \"refresh\"\
+    : \"<refresh token>\" }\n```\n\n### 4. Logout (blacklist refresh token)\n\n```http\n\
+    POST /api/v1/auth/logout/\nAuthorization: Bearer <access>\nContent-Type: application/json\n\
+    \n{ \"refresh\": \"<refresh token>\" }\n```\n\n**Public endpoints** (no `Authorization`\
+    \ header): registration, login, token, password reset, some search/browse routes\
+    \ — check each operation’s **Authorize** lock icon in Swagger.\n\n---\n\n## Postman\
+    \ quickstart (easy)\n\n### A) Create a Postman environment (recommended)\n\nCreate\
+    \ a new Postman Environment and add these variables:\n\n- `baseUrl` = `http://localhost:8000/api/v1`\n\
+    - `accessToken` = *(empty to start)*\n- `refreshToken` = *(empty to start)*\n\n\
+    Then use requests like: `{{baseUrl}}/users/me/`\n\n### B) Login (get access +\
+    \ refresh)\n\n**POST** `{{baseUrl}}/auth/login/`\n\nHeaders:\n- `Content-Type:\
+    \ application/json`\n\nBody (raw JSON):\n\n```json\n{\n  \"email\": \"your@email.com\"\
+    ,\n  \"password\": \"your_password\"\n}\n```\n\nIn the response JSON, copy:\n\
+    - `access` → save into `accessToken`\n- `refresh` → save into `refreshToken`\n\
+    \n### C) Call any protected endpoint\n\nExample: **GET** `{{baseUrl}}/users/me/`\n\
+    \nIn Postman → Authorization:\n- Type: **Bearer Token**\n- Token: `{{accessToken}}`\n\
+    \n(or set header: `Authorization: Bearer {{accessToken}}`)\n\n### D) Refresh token\
+    \ (when access expires / you get 401)\n\n**POST** `{{baseUrl}}/auth/token/refresh/`\n\
+    \nBody (raw JSON):\n\n```json\n{ \"refresh\": \"{{refreshToken}}\" }\n```\n\n\
+    Copy the returned `access` into `accessToken`.\n\n### E) Logout\n\n**POST** `{{baseUrl}}/auth/logout/`\n\
+    \nAuthorization:\n- `Bearer {{accessToken}}`\n\nBody:\n\n```json\n{ \"refresh\"\
+    : \"{{refreshToken}}\" }\n```\n\n### F) Import this API into Postman (fastest)\n\
+    \nYou can generate a full Postman collection automatically:\n\n1. Open `http://localhost:8000/api/schema/`\n\
+    2. In Postman: **Import → Link/File**\n3. Paste the schema URL (or save the JSON\
+    \ and import)\n4. Set `{{baseUrl}}` once in your Environment and start testing.\n\
+    \n---\n\n## Standard headers\n\n| Header | Value | When |\n|--------|--------|------|\n\
+    | `Authorization` | `Bearer <access>` | Authenticated requests |\n| `Content-Type`\
+    \ | `application/json` | JSON bodies |\n| `Content-Type` | `multipart/form-data`\
+    \ | File uploads (do not set boundary manually) |\n\n---\n\n## Success responses\n\
+    \nDRF returns the resource JSON directly (not wrapped), for example:\n\n```json\n\
+    {\n  \"id\": \"uuid\",\n  \"title\": \"Fix leaking tap\",\n  \"budget\": \"800.00\"\
+    \n}\n```\n\nList endpoints use **page pagination**:\n\n```json\n{\n  \"count\"\
+    : 42,\n  \"next\": \"http://localhost:8000/api/v1/tasks/?page=2\",\n  \"previous\"\
+    : null,\n  \"results\": [ ... ]\n}\n```\n\nQuery params: `?page=1` and `?page_size=20`\
+    \ (default page size from server settings).\n\n---\n\n## Error responses\n\nErrors\
+    \ use a consistent envelope from the global exception handler:\n\n```json\n{\n\
+    \  \"success\": false,\n  \"error\": {\n    \"message\": \"Human-readable summary\"\
+    ,\n    \"details\": {\n      \"field_name\": [\"Error for this field\"],\n   \
+    \   \"non_field_errors\": [\"General validation error\"]\n    }\n  }\n}\n```\n\
+    \n| HTTP status | Meaning |\n|-------------|---------|\n| 400 | Validation / bad\
+    \ request |\n| 401 | Missing or invalid token |\n| 403 | Authenticated but not\
+    \ allowed |\n| 404 | Resource not found |\n| 429 | Rate limit (anonymous 100/h,\
+    \ user 1000/h) |\n| 500 | Server error |\n\n---\n\n## API areas (tags)\n\n| Tag\
+    \ | Purpose |\n|-----|---------|\n| **Authentication** | Login, JWT, password,\
+    \ email verification |\n| **Users** | Profiles, roles, badges, settings |\n| **Tasks**\
+    \ | Post/browse tasks, status, completion, attachments |\n| **Bids** | Offers\
+    \ on tasks |\n| **Reviews** | Ratings after completed work |\n| **Chat** | Task\
+    \ messaging |\n| **Notifications** | In-app notifications |\n| **Payments** |\
+    \ Task payments, escrow, payment methods, history |\n| **Wallets** | Balance,\
+    \ recharge, **withdrawal requests** (use this for payouts) |\n| **Fees** | Platform/withdrawal\
+    \ fee preview |\n| **Dashboard** | Tasker/poster dashboard stats |\n| **Search**\
+    \ | Search tasks/users |\n| **Locations** | Cities/areas |\n| **Uploads** | Images\
+    \ and files |\n| **Analytics** | Reporting (where enabled) |\n\n---\n\n## Important\
+    \ flows\n\n### Tasker wallet & withdrawal\n\n1. `GET /api/v1/wallets/wallets/balance/`\
+    \ — available balance, withdrawable amount, pending withdrawals  \n2. `POST /api/v1/wallets/withdrawals/`\
+    \ — create withdrawal (eSewa / bank); balance debited when **admin approves**,\
+    \ not while pending  \n3. `GET /api/v1/wallets/withdrawals/my_withdrawals/` —\
+    \ user’s withdrawal history  \n\nAdmin processes requests in Django admin: **Wallets\
+    \ - Withdrawal requests** (not Payments - Payouts).\n\n### Task payment & escrow\n\
+    \n1. Poster funds task - payment held in escrow  \n2. Tasker and poster confirm\
+    \ completion - `POST .../tasks/{id}/confirm_work_complete/`  \n3. Funds released\
+    \ to tasker wallet - visible in earned/history endpoints  \n\n### File upload\n\
+    \nUse `multipart/form-data` on upload endpoints; include the file field name shown\
+    \ in Swagger for that route.\n\n---\n\n## Postman examples (copy/paste)\n\n###\
+    \ Create a task\n\n**POST** `{{baseUrl}}/tasks/`\n\nAuthorization:\n- `Bearer\
+    \ {{accessToken}}`\n\nBody (raw JSON):\n\n```json\n{\n  \"title\": \"Fix leaking\
+    \ tap\",\n  \"description\": \"Kitchen sink tap is leaking and needs repair.\"\
+    ,\n  \"budget_type\": \"fixed\",\n  \"budget_amount\": 800,\n  \"location_type\"\
+    : \"physical\",\n  \"city\": \"Kathmandu\"\n}\n```\n\n### List tasks (public)\n\
+    \n**GET** `{{baseUrl}}/tasks/?page=1&page_size=20`\n\n### Create a review (after\
+    \ task is completed)\n\n**POST** `{{baseUrl}}/reviews/`\n\nAuthorization:\n- `Bearer\
+    \ {{accessToken}}`\n\nBody:\n\n```json\n{\n  \"task_id\": \"TASK_UUID_HERE\",\n\
+    \  \"rating\": 5,\n  \"comment\": \"Great experience\"\n}\n```\n\n### Get reviews\
+    \ for a user (public)\n\n**GET** `{{baseUrl}}/users/USER_UUID_HERE/reviews/`\n\
+    \n### Get reviews for a task (public)\n\n**GET** `{{baseUrl}}/tasks/TASK_UUID_OR_SLUG/reviews/`\n\
+    \n---\n\n## Mobile / web client checklist\n\n1. Store `access` and `refresh` securely\
+    \ (Keychain / Keystore / httpOnly cookie strategy on web).  \n2. On **401**, try\
+    \ refresh once, then redirect to login.  \n3. Send `Authorization: Bearer` on\
+    \ all protected calls.  \n4. Use paginated `next` URLs or `?page=` for lists.\
+    \  \n5. Parse `error.details` for form field errors.  \n6. Amounts are decimal\
+    \ strings or numbers in NPR (e.g. `800.00`).\n\n---\n\n## Support\n\n- OpenAPI\
+    \ schema: `/api/schema/` (import into Postman, Insomnia, or codegen)  \n- Questions:\
+    \ contact your team lead or check the repository `backend/apps/*/urls.py` for\
+    \ route sources  \n"
+  contact:
+    name: tasknepal Engineering
+    email: support@tasknepal.com
+  license:
+    name: Proprietary
+paths: {}
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'JWT access token from `POST /api/v1/auth/login/` or `POST /api/v1/auth/token/`.
+        Prefix: `Bearer <token>`.'
+servers:
+- url: http://localhost:8000
+  description: Local development
+- url: http://localhost:8000
+  description: Configured public API host
+tags:
+- name: Authentication
+  description: JWT login, token refresh, logout, password reset, and email verification.
+    Start here before calling protected routes.
+- name: Users
+  description: User profiles, roles (poster/tasker), badges, and account settings.
+- name: Tasks
+  description: Create and manage tasks, categories, attachments, status updates, and
+    dual-party completion (`confirm_work_complete`).
+- name: Bids
+  description: Taskers submit and manage offers on open tasks.
+- name: Reviews
+  description: Ratings and reviews after completed tasks.
+- name: Chat
+  description: Messaging between poster and tasker on a task.
+- name: Notifications
+  description: In-app notification list and read state.
+- name: Payments
+  description: Task payments, escrow, refunds, saved payment methods, and payment
+    history. For wallet cash-out use **Wallets - withdrawals**, not legacy Payout
+    records.
+- name: Wallets
+  description: Wallet balance, transactions, withdrawal requests, limits. Primary
+    API for tasker withdrawals (eSewa / bank transfer).
+- name: Fees
+  description: Preview platform and withdrawal fees before checkout or payout.
+- name: Dashboard
+  description: Aggregated stats for tasker/poster dashboards.
+- name: Search
+  description: Search tasks and users.
+- name: Locations
+  description: Cities, areas, and location helpers.
+- name: Uploads
+  description: Image and file uploads (`multipart/form-data`).
+- name: Analytics
+  description: Analytics and reporting endpoints.

@@ -1,0 +1,47 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var panel = document.getElementById("withdrawal-approval-actions");
+      if (!panel) return;
+
+      // Try to place the panel inside the "Approval" row (readonly field).
+      var approvalRow =
+        document.querySelector(".form-row.field-approval_actions_help") ||
+        document.getElementById("id_approval_actions_help")?.closest(".form-row");
+
+      if (approvalRow && approvalRow.parentNode) {
+        approvalRow.insertAdjacentElement("afterend", panel);
+      }
+    });
+  </script>
+{% endblock %}
+
+{# Show approve/reject in the main form area too (not just bottom). #}
+{% block after_field_sets %}
+  {% if original.pk and original.status == 'pending' %}
+    <div id="withdrawal-approval-actions" class="submit-row" style="margin: 12px 0; background: #e8f5e9; padding: 12px 14px; border: 1px solid #c8e6c9; border-left: 4px solid #2e7d32;">
+      <p style="margin: 0 0 10px; color: #1b5e20; font-weight: 600;">
+        {% translate "Pending withdrawal — approve to debit the user's wallet, or reject to cancel." %}
+      </p>
+      {# IMPORTANT: Admin page already has a <form>. Do NOT nest forms here. #}
+      <input type="submit" value="{% translate 'Approve withdrawal (debit wallet)' %}" class="default" name="_approve_withdrawal">
+      <input
+        type="submit"
+        value="{% translate 'Reject withdrawal' %}"
+        class="deletelink"
+        name="_reject_withdrawal"
+        style="margin-left: 10px;"
+        onclick="return confirm('{% translate "Reject this withdrawal request?" %}');"
+      >
+    </div>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
+
+{% block submit_buttons_bottom %}
+{{ block.super }}
+{% endblock %}

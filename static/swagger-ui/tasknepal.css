@@ -1,0 +1,139 @@
+/* Minimal, production-friendly Swagger UI theme for tasknepal */
+
+:root {
+  --tn-blue: #1161fe;
+  --tn-ink: #0b1a3a;
+  --tn-muted: #6b7280;
+  --tn-bg: #f5f7fb;
+  --tn-card: #ffffff;
+  --tn-border: rgba(15, 23, 42, 0.10);
+}
+
+body {
+  background: var(--tn-bg);
+}
+
+.swagger-ui .topbar {
+  background: var(--tn-card);
+  border-bottom: 1px solid var(--tn-border);
+}
+
+.swagger-ui .topbar .download-url-wrapper {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 10px 16px;
+}
+
+.swagger-ui .topbar .download-url-wrapper input[type="text"] {
+  border-radius: 12px;
+  border: 1px solid var(--tn-border);
+}
+
+.swagger-ui .topbar .download-url-wrapper .download-url-button {
+  border-radius: 12px;
+  background: var(--tn-blue);
+  border-color: var(--tn-blue);
+}
+
+.swagger-ui .wrapper {
+  padding: 0 0 32px;
+}
+
+.swagger-ui .info {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 22px 16px 6px;
+}
+
+.swagger-ui .info .title {
+  color: var(--tn-ink);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.swagger-ui .info .description,
+.swagger-ui .info p,
+.swagger-ui .info li {
+  color: var(--tn-muted);
+}
+
+.swagger-ui .scheme-container {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.swagger-ui .auth-wrapper {
+  padding: 12px 14px;
+  border: 1px solid var(--tn-border);
+  border-radius: 16px;
+  background: var(--tn-card);
+}
+
+.swagger-ui .btn.authorize {
+  border-radius: 12px;
+  border-color: var(--tn-blue);
+  color: var(--tn-blue);
+}
+
+.swagger-ui .btn.authorize svg {
+  fill: var(--tn-blue);
+}
+
+.swagger-ui .btn.execute {
+  border-radius: 12px;
+  background: var(--tn-blue);
+  border-color: var(--tn-blue);
+}
+
+.swagger-ui .opblock {
+  border-radius: 16px;
+  border: 1px solid var(--tn-border);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.swagger-ui .opblock-tag {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.swagger-ui .opblock-tag-section {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.swagger-ui .opblock-summary-control {
+  border-radius: 14px;
+}
+
+.swagger-ui .opblock .opblock-summary-method {
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+.swagger-ui .opblock-description-wrapper p,
+.swagger-ui .opblock-external-docs-wrapper p,
+.swagger-ui .opblock-title_normal p {
+  color: var(--tn-muted);
+}
+
+.swagger-ui table thead tr td,
+.swagger-ui table thead tr th {
+  color: var(--tn-ink);
+}
+
+.swagger-ui .parameters-col_description input[type="text"],
+.swagger-ui input[type="text"],
+.swagger-ui input[type="password"],
+.swagger-ui input[type="search"],
+.swagger-ui textarea {
+  border-radius: 12px;
+  border: 1px solid var(--tn-border);
+}
+

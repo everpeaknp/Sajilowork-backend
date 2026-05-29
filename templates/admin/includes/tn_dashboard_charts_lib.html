@@ -1,0 +1,63 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script>
+(function () {
+  const font = { family: '"DM Sans", system-ui, sans-serif' };
+  const gridColor = "rgba(148, 163, 184, 0.25)";
+  const palette = ["#0ea5e9","#6366f1","#10b981","#f59e0b","#ec4899","#8b5cf6","#14b8a6","#ef4444"];
+
+  const defaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { font, padding: 14 } },
+      tooltip: { backgroundColor: "#0f172a", titleFont: font, bodyFont: font, padding: 12, cornerRadius: 8 },
+    },
+  };
+
+  window.TNCharts = {
+    palette,
+    doughnut(id, labels, values) {
+      const node = document.getElementById(id);
+      if (!node || !labels.length) return;
+      new Chart(node, {
+        type: "doughnut",
+        data: { labels, datasets: [{ data: values, backgroundColor: palette.slice(0, labels.length), borderWidth: 0 }] },
+        options: { ...defaults, cutout: "62%", plugins: { ...defaults.plugins, legend: { position: "bottom", labels: { font } } } },
+      });
+    },
+    bar(id, labels, values, horizontal) {
+      const node = document.getElementById(id);
+      if (!node || !labels.length) return;
+      new Chart(node, {
+        type: "bar",
+        data: { labels, datasets: [{ data: values, backgroundColor: horizontal ? "rgba(14,165,233,0.75)" : palette.map(c => c + "cc"), borderRadius: 6 }] },
+        options: {
+          ...defaults, indexAxis: horizontal ? "y" : "x",
+          scales: { x: { grid: { color: gridColor }, ticks: { font } }, y: { grid: { color: gridColor }, ticks: { font } } },
+          plugins: { ...defaults.plugins, legend: { display: false } },
+        },
+      });
+    },
+    line(id, labels, values, borderColor, fillColor) {
+      const node = document.getElementById(id);
+      if (!node) return;
+      new Chart(node, {
+        type: "line",
+        data: {
+          labels: labels.length ? labels : ["—"],
+          datasets: [{ data: values.length ? values : [0], borderColor, backgroundColor: fillColor, fill: true, tension: 0.35, pointRadius: 3, borderWidth: 2.5 }],
+        },
+        options: {
+          ...defaults,
+          scales: { x: { grid: { display: false }, ticks: { font } }, y: { grid: { color: gridColor }, ticks: { font } } },
+          plugins: { ...defaults.plugins, legend: { display: false } },
+        },
+      });
+    },
+    read(id) {
+      const el = document.getElementById(id);
+      return el ? JSON.parse(el.textContent) : {};
+    },
+  };
+})();
+</script>

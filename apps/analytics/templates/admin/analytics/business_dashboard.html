@@ -1,0 +1,669 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    /* Jazzmin content area behind dashboard */
+    section.content:has(.tn-analytics),
+    #content:has(.tn-analytics) {
+      background: #f0f4f8 !important;
+      padding: 1.25rem 1.5rem 2rem !important;
+    }
+
+    /* Scoped dashboard — works with Jazzmin / Grappelli (no #content-main dependency) */
+    .tn-analytics {
+      --tn-bg: #f0f4f8;
+      --tn-surface: #ffffff;
+      --tn-border: #e2e8f0;
+      --tn-text: #0f172a;
+      --tn-muted: #64748b;
+      --tn-primary: #0ea5e9;
+      --tn-primary-dark: #0284c7;
+      --tn-accent: #6366f1;
+      --tn-success: #10b981;
+      --tn-warning: #f59e0b;
+      --tn-danger: #ef4444;
+      --tn-radius: 14px;
+      --tn-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.06);
+      font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+      color: var(--tn-text);
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 0 2.5rem;
+      box-sizing: border-box;
+    }
+    .tn-analytics *, .tn-analytics *::before, .tn-analytics *::after {
+      box-sizing: border-box;
+    }
+
+    .tn-analytics__hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1.25rem;
+      margin-bottom: 1.75rem;
+      padding: 1.75rem 2rem;
+      border-radius: var(--tn-radius);
+      background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 40%, #0ea5e9 100%);
+      color: #fff;
+      box-shadow: var(--tn-shadow);
+    }
+    .tn-analytics__hero h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff !important;
+      float: none !important;
+      width: auto !important;
+      padding: 0 !important;
+    }
+    .tn-analytics__hero-meta {
+      margin: 0;
+      font-size: 0.9rem;
+      opacity: 0.88;
+    }
+    .tn-analytics__hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .tn-analytics__period-form {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255,255,255,0.15);
+      padding: 0.35rem 0.5rem 0.35rem 0.85rem;
+      border-radius: 10px;
+      backdrop-filter: blur(8px);
+    }
+    .tn-analytics__period-form label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin: 0;
+      color: #fff;
+    }
+    .tn-analytics__period-form select {
+      border: none;
+      border-radius: 8px;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      min-width: 120px;
+    }
+    .tn-analytics__btn {
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1.1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .tn-analytics__btn--primary {
+      background: #fff;
+      color: #0369a1;
+    }
+    .tn-analytics__btn--primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .tn-analytics__btn--ghost {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      text-decoration: none !important;
+      display: inline-flex;
+      align-items: center;
+    }
+    .tn-analytics__btn--ghost:hover {
+      background: rgba(255,255,255,0.3);
+      color: #fff !important;
+    }
+
+    .tn-analytics__quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .tn-analytics__quick-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--tn-primary-dark);
+      background: var(--tn-surface);
+      border: 1px solid var(--tn-border);
+      border-radius: 999px;
+      text-decoration: none !important;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .tn-analytics__quick-links a:hover {
+      border-color: var(--tn-primary);
+      box-shadow: 0 2px 8px rgba(14, 165, 233, 0.15);
+    }
+
+    .tn-analytics__kpi-grid {
+      display: grid !important;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      gap: 1rem !important;
+      margin-bottom: 1.5rem !important;
+      width: 100% !important;
+    }
+    @media (max-width: 1200px) {
+      .tn-analytics__kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    }
+    @media (max-width: 560px) {
+      .tn-analytics__kpi-grid { grid-template-columns: 1fr !important; }
+    }
+
+    .tn-analytics__kpi {
+      display: block !important;
+      position: relative;
+      background: var(--tn-surface) !important;
+      border: 1px solid var(--tn-border) !important;
+      border-radius: var(--tn-radius) !important;
+      padding: 1.15rem 1.25rem !important;
+      box-shadow: var(--tn-shadow) !important;
+      overflow: hidden;
+      margin: 0 !important;
+      width: 100% !important;
+      float: none !important;
+    }
+    .tn-analytics__kpi::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--tn-primary), var(--tn-accent));
+    }
+    .tn-analytics__kpi:nth-child(2)::before { background: linear-gradient(90deg, #10b981, #34d399); }
+    .tn-analytics__kpi:nth-child(3)::before { background: linear-gradient(90deg, #6366f1, #a855f7); }
+    .tn-analytics__kpi:nth-child(4)::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .tn-analytics__kpi:nth-child(5)::before { background: linear-gradient(90deg, #14b8a6, #2dd4bf); }
+    .tn-analytics__kpi:nth-child(6)::before { background: linear-gradient(90deg, #ec4899, #f472b6); }
+    .tn-analytics__kpi:nth-child(7)::before { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .tn-analytics__kpi:nth-child(8)::before { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
+
+    .tn-analytics__kpi-label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--tn-muted);
+      margin: 0 0 0.5rem;
+    }
+    .tn-analytics__kpi-value {
+      display: block;
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--tn-text);
+      margin: 0;
+      line-height: 1.2;
+    }
+    .tn-analytics__kpi-hint {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--tn-muted);
+      margin: 0.45rem 0 0;
+      line-height: 1.4;
+    }
+
+    .tn-analytics__charts {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 1.25rem !important;
+      margin-bottom: 1.5rem !important;
+      width: 100% !important;
+    }
+    .tn-analytics__charts .tn-analytics__chart-card--wide {
+      grid-column: 1 / -1;
+    }
+    @media (max-width: 992px) {
+      .tn-analytics__charts { grid-template-columns: 1fr !important; }
+      .tn-analytics__charts .tn-analytics__chart-card--wide { grid-column: auto; }
+    }
+
+    .tn-analytics__chart-card,
+    .tn-analytics__panel {
+      display: block !important;
+      background: var(--tn-surface) !important;
+      border: 1px solid var(--tn-border) !important;
+      border-radius: var(--tn-radius) !important;
+      padding: 1.25rem 1.35rem !important;
+      box-shadow: var(--tn-shadow) !important;
+      margin: 0 0 1.25rem !important;
+      width: 100% !important;
+      float: none !important;
+    }
+    .tn-analytics__chart-card h2,
+    .tn-analytics__panel h2 {
+      margin: 0 0 1rem !important;
+      padding: 0 0 0.65rem !important;
+      font-size: 0.95rem !important;
+      font-weight: 700 !important;
+      color: var(--tn-text) !important;
+      border-bottom: 1px solid var(--tn-border) !important;
+      float: none !important;
+      width: 100% !important;
+    }
+    .tn-analytics__chart-wrap {
+      position: relative;
+      height: 260px;
+      width: 100%;
+    }
+    .tn-analytics__chart-wrap--sm { height: 220px; }
+
+    .tn-analytics__panels {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 1.25rem !important;
+      margin-bottom: 1.25rem !important;
+    }
+    @media (max-width: 1100px) {
+      .tn-analytics__panels { grid-template-columns: 1fr !important; }
+    }
+
+    .tn-analytics__table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      font-size: 0.85rem !important;
+      margin: 0 !important;
+    }
+    .tn-analytics__table th,
+    .tn-analytics__table td {
+      padding: 0.55rem 0.65rem !important;
+      text-align: left !important;
+      border-bottom: 1px solid var(--tn-border) !important;
+      display: table-cell !important;
+    }
+    .tn-analytics__table th {
+      font-weight: 600 !important;
+      color: var(--tn-muted) !important;
+      font-size: 0.72rem !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.04em !important;
+      background: #f8fafc !important;
+    }
+    .tn-analytics__table tr:last-child td { border-bottom: none !important; }
+    .tn-analytics__table .tn-num {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+
+    .tn-analytics__activity {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 1rem !important;
+    }
+    @media (max-width: 900px) {
+      .tn-analytics__activity { grid-template-columns: 1fr !important; }
+    }
+    .tn-analytics__activity ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .tn-analytics__activity li {
+      padding: 0.65rem 0;
+      border-bottom: 1px solid var(--tn-border);
+      font-size: 0.8rem;
+      line-height: 1.45;
+      color: var(--tn-text);
+    }
+    .tn-analytics__activity li:last-child { border-bottom: none; }
+    .tn-analytics__activity .tn-time {
+      color: var(--tn-muted);
+      font-size: 0.72rem;
+    }
+    .tn-analytics__badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="tn-analytics">
+  <header class="tn-analytics__hero">
+    <div>
+      <h1>Business analytics</h1>
+      <p class="tn-analytics__hero-meta">
+        {{ report.period_label }} · {{ report.currency }} · Updated {{ report.generated_at|date:"M j, Y H:i" }}
+      </p>
+    </div>
+    <div class="tn-analytics__hero-actions">
+      <form class="tn-analytics__period-form" method="get" action="">
+        <label for="tn-days">Period</label>
+        <select name="days" id="tn-days">
+          {% for value, label in period_choices %}
+          <option value="{{ value }}" {% if selected_days == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="tn-analytics__btn tn-analytics__btn--primary">Apply</button>
+      </form>
+      <a class="tn-analytics__btn tn-analytics__btn--ghost" href="{% url 'admin:index' %}">← Admin home</a>
+    </div>
+  </header>
+
+  {% include "admin/includes/tn_dashboard_nav.html" %}
+  <nav class="tn-analytics__quick-links" style="margin-top: -0.75rem;">
+    <a href="{% url 'admin:fees_feetransaction_changelist' %}">Fee log</a>
+    <a href="{% url 'admin:wallets_withdrawalrequest_changelist' %}">Withdrawals</a>
+    <a href="{% url 'admin:disputes_dispute_changelist' %}">Disputes</a>
+    <a href="{% url 'admin:payments_escrow_changelist' %}">Escrow</a>
+  </nav>
+
+  <div class="tn-analytics__kpi-grid">
+    {% for kpi in report.kpis %}
+    <article class="tn-analytics__kpi">
+      <span class="tn-analytics__kpi-label">{{ kpi.label }}</span>
+      <span class="tn-analytics__kpi-value">{{ report.currency }} {{ kpi.value|floatformat:2 }}</span>
+      <span class="tn-analytics__kpi-hint">{{ kpi.hint }}</span>
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="tn-analytics__charts">
+    <section class="tn-analytics__chart-card tn-analytics__chart-card--wide">
+      <h2>Platform fee revenue (daily)</h2>
+      <div class="tn-analytics__chart-wrap">
+        <canvas id="chartFeeTrend" aria-label="Daily platform fees"></canvas>
+      </div>
+    </section>
+
+    <section class="tn-analytics__chart-card">
+      <h2>Cash flow overview</h2>
+      <div class="tn-analytics__chart-wrap tn-analytics__chart-wrap--sm">
+        <canvas id="chartCashFlow" aria-label="Cash flow"></canvas>
+      </div>
+    </section>
+
+    <section class="tn-analytics__chart-card">
+      <h2>Period growth</h2>
+      <div class="tn-analytics__chart-wrap tn-analytics__chart-wrap--sm">
+        <canvas id="chartGrowth" aria-label="Growth metrics"></canvas>
+      </div>
+    </section>
+
+    <section class="tn-analytics__chart-card">
+      <h2>Fees by type</h2>
+      <div class="tn-analytics__chart-wrap tn-analytics__chart-wrap--sm">
+        <canvas id="chartFeesByType" aria-label="Fees by type"></canvas>
+      </div>
+    </section>
+
+    <section class="tn-analytics__chart-card">
+      <h2>Payments by status</h2>
+      <div class="tn-analytics__chart-wrap tn-analytics__chart-wrap--sm">
+        <canvas id="chartPayments" aria-label="Payments by status"></canvas>
+      </div>
+    </section>
+
+    <section class="tn-analytics__chart-card">
+      <h2>Escrow by status</h2>
+      <div class="tn-analytics__chart-wrap tn-analytics__chart-wrap--sm">
+        <canvas id="chartEscrow" aria-label="Escrow by status"></canvas>
+      </div>
+    </section>
+
+    <section class="tn-analytics__chart-card">
+      <h2>New tasks (daily)</h2>
+      <div class="tn-analytics__chart-wrap tn-analytics__chart-wrap--sm">
+        <canvas id="chartTasks" aria-label="Daily new tasks"></canvas>
+      </div>
+    </section>
+
+    <section class="tn-analytics__chart-card">
+      <h2>Withdrawals by status</h2>
+      <div class="tn-analytics__chart-wrap tn-analytics__chart-wrap--sm">
+        <canvas id="chartWithdrawals" aria-label="Withdrawals"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <div class="tn-analytics__panels">
+    <section class="tn-analytics__panel">
+      <h2>Recharges &amp; withdrawals</h2>
+      <table class="tn-analytics__table">
+        <tbody>
+          <tr><th>Total recharges</th><td class="tn-num">{{ report.currency }} {{ report.recharges.total|floatformat:2 }}</td></tr>
+          <tr><th>Wallet credits</th><td class="tn-num">{{ report.recharges.wallet_credits|floatformat:2 }} ({{ report.recharges.wallet_count }})</td></tr>
+          <tr><th>Deposits</th><td class="tn-num">{{ report.recharges.deposit_payments|floatformat:2 }}</td></tr>
+          <tr><th>Withdrawals done</th><td class="tn-num">{{ report.withdrawals.completed_total|floatformat:2 }}</td></tr>
+          <tr><th>Pending withdrawals</th><td class="tn-num">{{ report.withdrawals.pending_total|floatformat:2 }}</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="tn-analytics__panel">
+      <h2>Platform P&amp;L snapshot</h2>
+      <table class="tn-analytics__table">
+        <tbody>
+          <tr><th>Net platform fees</th><td class="tn-num">{{ report.financial.net_platform_fees|floatformat:2 }}</td></tr>
+          <tr><th>Estimated profit</th><td class="tn-num">{{ report.financial.estimated_profit|floatformat:2 }}</td></tr>
+          <tr><th>Task GMV</th><td class="tn-num">{{ report.financial.gmv|floatformat:2 }}</td></tr>
+          <tr><th>Paid to taskers</th><td class="tn-num">{{ report.financial.tasker_payouts|floatformat:2 }}</td></tr>
+          <tr><th>Refunds</th><td class="tn-num">{{ report.financial.refunds|floatformat:2 }}</td></tr>
+          <tr><th>Escrow held now</th><td class="tn-num">{{ report.escrow.held_now|floatformat:2 }}</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="tn-analytics__panel">
+      <h2>Users &amp; disputes</h2>
+      <table class="tn-analytics__table">
+        <tbody>
+          <tr><th>Total users</th><td class="tn-num">{{ report.overview.users.total }}</td></tr>
+          <tr><th>Taskers</th><td class="tn-num">{{ report.overview.users.taskers }}</td></tr>
+          <tr><th>Tasks completed</th><td class="tn-num">{{ report.overview.tasks.completed }}</td></tr>
+          <tr><th>Open disputes</th><td class="tn-num"><span class="tn-analytics__badge">{{ report.disputes.open }} open</span></td></tr>
+          <tr><th>New users (period)</th><td class="tn-num">{{ report.growth.new_users }}</td></tr>
+          <tr><th>New tasks (period)</th><td class="tn-num">{{ report.growth.new_tasks }}</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <div class="tn-analytics__activity">
+    <section class="tn-analytics__panel">
+      <h2>Recent recharges</h2>
+      <ul>
+        {% for row in report.recent.recharges %}
+        <li>
+          <span class="tn-time">{{ row.created_at|date:"M j, H:i" }}</span><br>
+          <strong>{{ report.currency }} {{ row.amount }}</strong> · {{ row.wallet__user__email }}
+        </li>
+        {% empty %}
+        <li>No recharges in this period.</li>
+        {% endfor %}
+      </ul>
+    </section>
+    <section class="tn-analytics__panel">
+      <h2>Recent withdrawals</h2>
+      <ul>
+        {% for row in report.recent.withdrawals %}
+        <li>
+          <span class="tn-time">{{ row.created_at|date:"M j, H:i" }}</span><br>
+          <strong>{{ report.currency }} {{ row.amount }}</strong> · {{ row.status }} · {{ row.wallet__user__email }}
+        </li>
+        {% empty %}
+        <li>No withdrawals in this period.</li>
+        {% endfor %}
+      </ul>
+    </section>
+    <section class="tn-analytics__panel">
+      <h2>Recent fees</h2>
+      <ul>
+        {% for row in report.recent.fees %}
+        <li>
+          <span class="tn-time">{{ row.created_at|date:"M j, H:i" }}</span><br>
+          {{ row.fee_type }} · <strong>{{ report.currency }} {{ row.fee_amount }}</strong>
+        </li>
+        {% empty %}
+        <li>No fees in this period.</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+</div>
+
+{{ report.charts|json_script:"tn-analytics-charts" }}
+{% endblock %}
+
+{% block extrajs %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+  <script>
+  (function () {
+    const el = document.getElementById("tn-analytics-charts");
+    if (!el || typeof Chart === "undefined") return;
+    const data = JSON.parse(el.textContent);
+
+    const font = { family: '"DM Sans", system-ui, sans-serif' };
+    const gridColor = "rgba(148, 163, 184, 0.25)";
+    const defaults = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { font, padding: 14 } },
+        tooltip: {
+          backgroundColor: "#0f172a",
+          titleFont: font,
+          bodyFont: font,
+          padding: 12,
+          cornerRadius: 8,
+        },
+      },
+    };
+
+    const palette = [
+      "#0ea5e9", "#6366f1", "#10b981", "#f59e0b", "#ec4899",
+      "#8b5cf6", "#14b8a6", "#ef4444", "#64748b",
+    ];
+
+    function doughnut(id, labels, values) {
+      const node = document.getElementById(id);
+      if (!node || !labels.length) return;
+      new Chart(node, {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: palette.slice(0, labels.length),
+            borderWidth: 0,
+            hoverOffset: 8,
+          }],
+        },
+        options: {
+          ...defaults,
+          cutout: "62%",
+          plugins: { ...defaults.plugins, legend: { position: "bottom", labels: { font, padding: 12 } } },
+        },
+      });
+    }
+
+    function bar(id, labels, values, horizontal) {
+      const node = document.getElementById(id);
+      if (!node || !labels.length) return;
+      new Chart(node, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "NPR",
+            data: values,
+            backgroundColor: horizontal
+              ? "rgba(14, 165, 233, 0.75)"
+              : palette.map((c) => c + "cc"),
+            borderRadius: 6,
+            borderSkipped: false,
+          }],
+        },
+        options: {
+          ...defaults,
+          indexAxis: horizontal ? "y" : "x",
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { font } },
+            y: { grid: { color: gridColor }, ticks: { font } },
+          },
+          plugins: { ...defaults.plugins, legend: { display: false } },
+        },
+      });
+    }
+
+    function line(id, labels, values, label, borderColor, fillColor) {
+      const node = document.getElementById(id);
+      if (!node) return;
+      new Chart(node, {
+        type: "line",
+        data: {
+          labels: labels.length ? labels : ["No data"],
+          datasets: [{
+            label: label,
+            data: values.length ? values : [0],
+            borderColor: borderColor,
+            backgroundColor: fillColor,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            borderWidth: 2.5,
+          }],
+        },
+        options: {
+          ...defaults,
+          scales: {
+            x: { grid: { display: false }, ticks: { font, maxRotation: 0 } },
+            y: { grid: { color: gridColor }, ticks: { font } },
+          },
+          plugins: { ...defaults.plugins, legend: { display: false } },
+        },
+      });
+    }
+
+    const ft = data.fee_trend || {};
+    line("chartFeeTrend", ft.labels || [], ft.values || [], "Platform fees (NPR)", "#0ea5e9", "rgba(14, 165, 233, 0.15)");
+
+    const tt = data.task_trend || {};
+    line("chartTasks", tt.labels || [], tt.values || [], "New tasks", "#6366f1", "rgba(99, 102, 241, 0.15)");
+
+    const cf = data.cash_flow || {};
+    bar("chartCashFlow", cf.labels || [], cf.values || [], true);
+
+    const gr = data.growth || {};
+    bar("chartGrowth", gr.labels || [], gr.values || [], false);
+
+    const fbt = data.fees_by_type || {};
+    doughnut("chartFeesByType", fbt.labels || [], fbt.values || []);
+
+    const ps = data.payments_by_status || {};
+    doughnut("chartPayments", ps.labels || [], ps.values || []);
+
+    const es = data.escrow_by_status || {};
+    doughnut("chartEscrow", es.labels || [], es.values || []);
+
+    const wd = data.withdrawals_by_status || {};
+    bar("chartWithdrawals", wd.labels || [], wd.values || [], false);
+  })();
+  </script>
+{% endblock %}

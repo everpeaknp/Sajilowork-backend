@@ -1,0 +1,197 @@
+<style>
+  /* Scoped admin report layout (Grappelli/Jazzmin-safe) */
+  #content-main .tn-report {
+    clear: both;
+    display: block;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 0 2rem;
+    box-sizing: border-box;
+  }
+
+  #content-main .tn-report::after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+
+  #content-main .tn-report__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0 0 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  #content-main .tn-report__header h1 {
+    float: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 1.5rem;
+    line-height: 1.3;
+    width: auto;
+  }
+
+  #content-main .tn-report__back {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: #417690;
+    color: #fff !important;
+    text-decoration: none !important;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  #content-main .tn-report__back:hover {
+    background: #205067;
+    color: #fff !important;
+  }
+
+  #content-main .tn-report__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    width: 100%;
+  }
+
+  @media (max-width: 992px) {
+    #content-main .tn-report__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  #content-main .tn-report__card {
+    display: block;
+    float: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    box-sizing: border-box;
+  }
+
+  #content-main .tn-report__card h2 {
+    float: none !important;
+    clear: both;
+    margin: 0 0 1rem;
+    padding: 0 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #333;
+    border-bottom: 2px solid #79aec8;
+    width: 100%;
+  }
+
+  #content-main .tn-report__card table {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+  }
+
+  #content-main .tn-report__card table th,
+  #content-main .tn-report__card table td {
+    display: table-cell;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid #eee;
+  }
+
+  #content-main .tn-report__card table th {
+    font-weight: 600;
+    color: #495057;
+    width: 55%;
+    background: #f8f9fa;
+  }
+
+  #content-main .tn-report__card table thead th {
+    background: #e9ecef;
+    width: auto;
+  }
+
+  #content-main .tn-report__card table tr:last-child th,
+  #content-main .tn-report__card table tr:last-child td {
+    border-bottom: none;
+  }
+
+  #content-main .tn-report__section {
+    clear: both;
+    display: block;
+    width: 100%;
+    margin-bottom: 2rem;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.25rem;
+    box-sizing: border-box;
+  }
+
+  #content-main .tn-report__section h2 {
+    float: none !important;
+    margin: 0 0 1rem;
+    font-size: 1.1rem;
+    border-bottom: 2px solid #79aec8;
+    padding-bottom: 0.5rem;
+  }
+
+  #content-main .tn-report__section table {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  #content-main .tn-report__section table th,
+  #content-main .tn-report__section table td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+  }
+
+  #content-main .tn-report__section table thead th {
+    background: #e9ecef;
+    font-weight: 600;
+  }
+
+  #content-main .tn-report__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  #content-main .tn-report__list li {
+    display: block;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid #eee;
+    line-height: 1.5;
+    font-size: 0.9rem;
+  }
+
+  #content-main .tn-report__list li:last-child {
+    border-bottom: none;
+  }
+
+  #content-main .tn-report__list a {
+    font-weight: 600;
+  }
+
+  #content-main .tn-report__muted {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin: 0 0 1rem;
+  }
+
+  #content-main .tn-report__grid--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+</style>

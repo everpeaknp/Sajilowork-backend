@@ -1,0 +1,136 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {% include "admin/includes/tn_dashboard_head.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="tn-analytics">
+  <header class="tn-analytics__hero tn-analytics__hero--amber">
+    <div>
+      <h1>{{ title }}</h1>
+      <p class="tn-analytics__hero-meta">{{ period_label }} · {{ overview.users.verified_taskers }} verified taskers</p>
+    </div>
+    <div class="tn-analytics__hero-actions">
+      <form class="tn-analytics__period-form" method="get" action="">
+        <label for="tn-days">Period</label>
+        <select name="days" id="tn-days">
+          {% for value, label in period_choices %}
+          <option value="{{ value }}" {% if selected_days == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="tn-analytics__btn tn-analytics__btn--primary">Apply</button>
+      </form>
+      <a class="tn-analytics__btn tn-analytics__btn--ghost" href="{% url 'admin:users_user_changelist' %}">← Users</a>
+    </div>
+  </header>
+
+  {% include "admin/includes/tn_dashboard_nav.html" %}
+
+  <div class="tn-analytics__kpi-grid">
+    {% for kpi in kpis %}
+    <article class="tn-analytics__kpi">
+      <span class="tn-analytics__kpi-label">{{ kpi.label }}</span>
+      <span class="tn-analytics__kpi-value">{{ kpi.value }}</span>
+      <span class="tn-analytics__kpi-hint">{{ kpi.hint }}</span>
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="tn-analytics__charts">
+    <section class="tn-analytics__chart-card">
+      <h2>Users by role</h2>
+      <div class="tn-analytics__chart-wrap">
+        <canvas id="chartRoles" aria-label="Users by role"></canvas>
+      </div>
+    </section>
+    <section class="tn-analytics__chart-card">
+      <h2>Period growth</h2>
+      <div class="tn-analytics__chart-wrap">
+        <canvas id="chartGrowth" aria-label="Growth metrics"></canvas>
+      </div>
+    </section>
+    <section class="tn-analytics__chart-card tn-analytics__chart-card--wide">
+      <h2>Daily signups (last 30 days)</h2>
+      <div class="tn-analytics__chart-wrap">
+        <canvas id="chartSignups" aria-label="Daily signups"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <div class="tn-analytics__panels">
+    <section class="tn-analytics__panel">
+      <h2>Platform overview</h2>
+      <table class="tn-analytics__table">
+        <tbody>
+          <tr><th>Total users</th><td class="tn-num">{{ overview.users.total }}</td></tr>
+          <tr><th>Customers</th><td class="tn-num">{{ overview.users.customers }}</td></tr>
+          <tr><th>Taskers</th><td class="tn-num">{{ overview.users.taskers }}</td></tr>
+          <tr><th>Verified taskers</th><td class="tn-num">{{ overview.users.verified_taskers }}</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="tn-analytics__panel">
+      <h2>{{ period_label }}</h2>
+      <table class="tn-analytics__table">
+        <tbody>
+          <tr><th>New users</th><td class="tn-num">{{ growth.new_users }}</td></tr>
+          <tr><th>New tasks</th><td class="tn-num">{{ growth.new_tasks }}</td></tr>
+          <tr><th>New bids</th><td class="tn-num">{{ growth.new_bids }}</td></tr>
+          <tr><th>Revenue (NPR)</th><td class="tn-num">{{ growth.revenue }}</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="tn-analytics__panel">
+      <h2>Users by role</h2>
+      <table class="tn-analytics__table">
+        <thead>
+          <tr><th>Role</th><th>Count</th></tr>
+        </thead>
+        <tbody>
+          {% for row in users_by_role %}
+          <tr>
+            <td>{{ row.role|default:"(none)" }}</td>
+            <td class="tn-num">{{ row.count }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="2">No users.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <section class="tn-analytics__panel">
+    <h2>Recent signups{% if period_label %} ({{ period_label }}){% endif %}</h2>
+    <div class="tn-analytics__activity">
+      <ul>
+        {% for u in recent_signups %}
+        <li>
+          <a href="{% url 'admin:users_user_change' u.pk %}">{{ u.email }}</a>
+          <span class="tn-time">{{ u.get_full_name }} · {{ u.role }} · {{ u.date_joined|date:"M j, Y H:i" }}</span>
+        </li>
+        {% empty %}
+        <li>No signups in this period.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+</div>
+
+{{ charts|json_script:"tn-charts-data" }}
+{% endblock %}
+
+{% block extrajs %}
+  {{ block.super }}
+  {% include "admin/includes/tn_dashboard_charts_lib.html" %}
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const c = TNCharts.read("tn-charts-data");
+    TNCharts.doughnut("chartRoles", c.by_role.labels, c.by_role.values);
+    TNCharts.bar("chartGrowth", c.growth.labels, c.growth.values, false);
+    TNCharts.line("chartSignups", c.signups.labels, c.signups.values, "#d97706", "rgba(217, 119, 6, 0.15)");
+  });
+  </script>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {% include "admin/includes/tn_dashboard_head.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="tn-analytics">
+  <header class="tn-analytics__hero tn-analytics__hero--emerald">
+    <div>
+      <h1>{{ title }}</h1>
+      <p class="tn-analytics__hero-meta">{{ period_label }} · {{ overview.tasks.completion_rate|floatformat:1 }}% completion rate</p>
+    </div>
+    <div class="tn-analytics__hero-actions">
+      <form class="tn-analytics__period-form" method="get" action="">
+        <label for="tn-days">Period</label>
+        <select name="days" id="tn-days">
+          {% for value, label in period_choices %}
+          <option value="{{ value }}" {% if selected_days == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="tn-analytics__btn tn-analytics__btn--primary">Apply</button>
+      </form>
+      <a class="tn-analytics__btn tn-analytics__btn--ghost" href="{% url 'admin:tasks_task_changelist' %}">← Tasks</a>
+    </div>
+  </header>
+
+  {% include "admin/includes/tn_dashboard_nav.html" %}
+
+  <div class="tn-analytics__kpi-grid">
+    {% for kpi in kpis %}
+    <article class="tn-analytics__kpi">
+      <span class="tn-analytics__kpi-label">{{ kpi.label }}</span>
+      <span class="tn-analytics__kpi-value">{{ kpi.value }}</span>
+      <span class="tn-analytics__kpi-hint">{{ kpi.hint }}</span>
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="tn-analytics__charts">
+    <section class="tn-analytics__chart-card">
+      <h2>Tasks by status</h2>
+      <div class="tn-analytics__chart-wrap">
+        <canvas id="chartTaskStatus" aria-label="Tasks by status"></canvas>
+      </div>
+    </section>
+    <section class="tn-analytics__chart-card">
+      <h2>Top categories</h2>
+      <div class="tn-analytics__chart-wrap">
+        <canvas id="chartCategories" aria-label="Tasks per category"></canvas>
+      </div>
+    </section>
+    <section class="tn-analytics__chart-card tn-analytics__chart-card--wide">
+      <h2>New tasks (daily, last 30 days)</h2>
+      <div class="tn-analytics__chart-wrap">
+        <canvas id="chartDailyTasks" aria-label="Daily new tasks"></canvas>
+      </div>
+    </section>
+    <section class="tn-analytics__chart-card">
+      <h2>Period activity</h2>
+      <div class="tn-analytics__chart-wrap tn-analytics__chart-wrap--sm">
+        <canvas id="chartGrowth" aria-label="New tasks and bids"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <div class="tn-analytics__panels">
+    <section class="tn-analytics__panel">
+      <h2>Tasks by status</h2>
+      <table class="tn-analytics__table">
+        <thead>
+          <tr><th>Status</th><th>Count</th></tr>
+        </thead>
+        <tbody>
+          {% for row in by_status %}
+          <tr>
+            <td>{{ row.status }}</td>
+            <td class="tn-num">{{ row.count }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="2">No tasks in this period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    <section class="tn-analytics__panel">
+      <h2>Top categories</h2>
+      <table class="tn-analytics__table">
+        <thead>
+          <tr><th>Category</th><th>Total</th><th>Open</th><th>Done</th></tr>
+        </thead>
+        <tbody>
+          {% for cat in by_category %}
+          <tr>
+            <td>{{ cat.name }}</td>
+            <td class="tn-num">{{ cat.total_tasks }}</td>
+            <td class="tn-num">{{ cat.open_tasks }}</td>
+            <td class="tn-num">{{ cat.completed_tasks }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">No categories.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    <section class="tn-analytics__panel">
+      <h2>{{ period_label }}</h2>
+      <table class="tn-analytics__table">
+        <tbody>
+          <tr><th>New tasks</th><td class="tn-num">{{ growth.new_tasks }}</td></tr>
+          <tr><th>New bids</th><td class="tn-num">{{ growth.new_bids }}</td></tr>
+          <tr><th>Total budget</th><td class="tn-num">NPR {{ budget_totals.total_budget|default:"0" }}</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <section class="tn-analytics__panel">
+    <h2>Recent tasks</h2>
+    <div class="tn-analytics__activity">
+      <ul>
+        {% for t in recent_tasks %}
+        <li>
+          <a href="{% url 'admin:tasks_task_change' t.pk %}">{{ t.title }}</a>
+          <span class="tn-time">{{ t.status }} · NPR {{ t.budget_amount }} · {{ t.created_at|date:"M j, Y" }}</span>
+        </li>
+        {% empty %}
+        <li>No recent tasks.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+</div>
+
+{{ charts|json_script:"tn-charts-data" }}
+{% endblock %}
+
+{% block extrajs %}
+  {{ block.super }}
+  {% include "admin/includes/tn_dashboard_charts_lib.html" %}
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const c = TNCharts.read("tn-charts-data");
+    TNCharts.doughnut("chartTaskStatus", c.by_status.labels, c.by_status.values);
+    TNCharts.bar("chartCategories", c.categories.labels, c.categories.values, true);
+    TNCharts.line("chartDailyTasks", c.daily.labels, c.daily.values, "#059669", "rgba(5, 150, 105, 0.15)");
+    TNCharts.bar("chartGrowth", c.growth.labels, c.growth.values, false);
+  });
+  </script>
+{% endblock %}
