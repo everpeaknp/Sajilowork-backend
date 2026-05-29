@@ -6,6 +6,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.utils import extend_schema
 
 from .services import DashboardService
 from .serializers import (
@@ -29,8 +30,27 @@ class DashboardViewSet(viewsets.ViewSet):
     """
     
     permission_classes = [IsAuthenticated]
+    serializer_class = PlatformOverviewSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'platform_overview':
+            return PlatformOverviewSerializer
+        if self.action == 'my_stats':
+            return UserStatisticsSerializer
+        if self.action == 'growth_metrics':
+            return GrowthMetricsSerializer
+        if self.action == 'category_statistics':
+            return CategoryStatisticsSerializer
+        if self.action == 'recent_activity':
+            return RecentActivitySerializer
+        if self.action == 'financial_summary':
+            return FinancialSummarySerializer
+        if self.action == 'top_performers':
+            return TopPerformerSerializer
+        return PlatformOverviewSerializer
     
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
+    @extend_schema(tags=['Dashboard'], responses={200: PlatformOverviewSerializer})
     def platform_overview(self, request):
         """
         Get overall platform statistics.
@@ -49,6 +69,7 @@ class DashboardViewSet(viewsets.ViewSet):
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticatedUser])
+    @extend_schema(tags=['Dashboard'], responses={200: UserStatisticsSerializer})
     def my_stats(self, request):
         """
         Get statistics for the current user.
@@ -64,6 +85,7 @@ class DashboardViewSet(viewsets.ViewSet):
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
+    @extend_schema(tags=['Dashboard'], responses={200: GrowthMetricsSerializer})
     def growth_metrics(self, request):
         """
         Get growth metrics for a specified period.
@@ -86,6 +108,7 @@ class DashboardViewSet(viewsets.ViewSet):
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
+    @extend_schema(tags=['Dashboard'], responses={200: CategoryStatisticsSerializer(many=True)})
     def category_statistics(self, request):
         """
         Get statistics by category.
@@ -102,6 +125,7 @@ class DashboardViewSet(viewsets.ViewSet):
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
+    @extend_schema(tags=['Dashboard'], responses={200: RecentActivitySerializer})
     def recent_activity(self, request):
         """
         Get recent platform activity.

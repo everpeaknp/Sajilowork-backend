@@ -30,8 +30,23 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # API documentation (OpenAPI 3 — Swagger UI + ReDoc)
+    # Core schema used by all documentation frontends.
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    # Primary Swagger UI used by engineers and the Next.js team.
+    path(
+        'api/docs/',
+        SpectacularSwaggerView.as_view(url_name='schema'),
+        name='swagger-ui',
+    ),
+    # Branded Swagger UI entrypoint for business / product stakeholders.
+    # This simply reuses the same OpenAPI schema, but lets you apply a
+    # custom favicon / title / CSS if desired.
+    path(
+        'api/docs/tasknepal/',
+        SpectacularSwaggerView.as_view(url_name='schema'),
+        name='swagger-ui-tasknepal',
+    ),
+    # Read‑only, text‑focused reference.
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     
     # API v1 - Only enabled apps

@@ -38,6 +38,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Add custom claims
         token['email'] = user.email
         token['role'] = user.role
+        token['is_staff'] = user.is_staff
+        token['is_superuser'] = user.is_superuser
         token['first_name'] = user.first_name
         token['last_name'] = user.last_name
         
@@ -48,6 +50,40 @@ class LoginSerializer(serializers.Serializer):
     """Serializer for user login."""
     email = serializers.EmailField(required=True)
     password = serializers.CharField(required=True, write_only=True)
+
+
+class AuthUserSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    email = serializers.EmailField()
+    first_name = serializers.CharField(allow_blank=True)
+    last_name = serializers.CharField(allow_blank=True)
+    role = serializers.CharField()
+    is_verified = serializers.BooleanField()
+    profile_image = serializers.CharField(allow_null=True, required=False)
+
+
+class AuthTokensResponseSerializer(serializers.Serializer):
+    access = serializers.CharField()
+    refresh = serializers.CharField()
+    user = AuthUserSerializer()
+
+
+class MessageResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+
+
+class ErrorResponseSerializer(serializers.Serializer):
+    error = serializers.CharField()
+
+
+class PasswordResetRequestResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    reset_link = serializers.CharField(required=False)
+
+
+class TokenVerifyResponseSerializer(serializers.Serializer):
+    valid = serializers.BooleanField()
+    user = AuthUserSerializer()
 
 
 class LogoutSerializer(serializers.Serializer):

@@ -255,7 +255,8 @@ class TransactionSerializer(serializers.ModelSerializer):
             'currency', 'balance_before', 'balance_after', 'payment',
             'refund', 'payout', 'description', 'metadata', 'created_at'
         ]
-        read_only_fields = '__all__'
+        # drf-spectacular (and DRF itself) requires this to be a list/tuple, not a string.
+        read_only_fields = tuple(fields)
 
 
 class TransactionListSerializer(serializers.ModelSerializer):

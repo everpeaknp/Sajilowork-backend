@@ -15,7 +15,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core import signing
 from django.utils import timezone
 
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, OpenApiExample
 
 from .serializers import (
     CustomTokenObtainPairSerializer,
@@ -25,6 +25,11 @@ from .serializers import (
     PasswordResetConfirmSerializer,
     EmailVerificationSerializer,
     ChangePasswordSerializer,
+    AuthTokensResponseSerializer,
+    MessageResponseSerializer,
+    ErrorResponseSerializer,
+    PasswordResetRequestResponseSerializer,
+    TokenVerifyResponseSerializer,
 )
 from . import social_oauth
 
@@ -52,6 +57,18 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     summary='Login (recommended for apps)',
     description='Returns JWT access/refresh tokens plus user profile fields (role, avatar, etc.).',
     request=LoginSerializer,
+    responses={
+        200: AuthTokensResponseSerializer,
+        401: OpenApiResponse(response=ErrorResponseSerializer, description='Invalid credentials'),
+        403: OpenApiResponse(response=ErrorResponseSerializer, description='Account disabled or suspended'),
+    },
+    examples=[
+        OpenApiExample(
+            'Login request',
+            value={'email': 'test@example.com', 'password': 'Test123456'},
+            request_only=True,
+        ),
+    ],
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -117,6 +134,10 @@ def login_view(request):
     tags=['Authentication'],
     summary='Logout (blacklist refresh token)',
     request=LogoutSerializer,
+    responses={
+        200: MessageResponseSerializer,
+        400: OpenApiResponse(response=ErrorResponseSerializer, description='Invalid refresh token'),
+    },
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -144,6 +165,13 @@ def logout_view(request):
         )
 
 
+@extend_schema(
+    tags=['Authentication'],
+    auth=[],
+    summary='Request password reset',
+    request=PasswordResetRequestSerializer,
+    responses={200: PasswordResetRequestResponseSerializer},
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def password_reset_request_view(request):
@@ -178,6 +206,16 @@ def password_reset_request_view(request):
         })
 
 
+@extend_schema(
+    tags=['Authentication'],
+    auth=[],
+    summary='Confirm password reset',
+    request=PasswordResetConfirmSerializer,
+    responses={
+        200: MessageResponseSerializer,
+        400: OpenApiResponse(response=ErrorResponseSerializer, description='Invalid/expired token'),
+    },
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def password_reset_confirm_view(request):
@@ -217,6 +255,16 @@ def password_reset_confirm_view(request):
         )
 
 
+@extend_schema(
+    tags=['Authentication'],
+    auth=[],
+    summary='Verify email',
+    request=EmailVerificationSerializer,
+    responses={
+        200: MessageResponseSerializer,
+        400: OpenApiResponse(response=ErrorResponseSerializer, description='Invalid/expired token'),
+    },
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def verify_email_view(request):
@@ -255,6 +303,15 @@ def verify_email_view(request):
         )
 
 
+@extend_schema(
+    tags=['Authentication'],
+    summary='Change password',
+    request=ChangePasswordSerializer,
+    responses={
+        200: MessageResponseSerializer,
+        400: OpenApiResponse(response=ErrorResponseSerializer, description='Validation error'),
+    },
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_password_view(request):
@@ -285,6 +342,11 @@ def change_password_view(request):
     })
 
 
+@extend_schema(
+    tags=['Authentication'],
+    summary='Verify current JWT token',
+    responses={200: TokenVerifyResponseSerializer},
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def verify_token_view(request):

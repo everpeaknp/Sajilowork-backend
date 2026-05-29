@@ -48,8 +48,13 @@ THIRD_PARTY_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    # 'django_filters',
+    # Enable django-filter so DEFAULT_FILTER_BACKENDS work and are documented in OpenAPI.
+    'django_filters',
+    # Core OpenAPI / Swagger generation.
     'drf_spectacular',
+    # Optional: serve Swagger UI assets via sidecar instead of bundling them into this repo.
+    # This keeps the project closer to drf-spectacular defaults and simplifies upgrades.
+    'drf_spectacular_sidecar',
     # 'channels',
     # 'django_celery_beat',
     # 'django_celery_results',
@@ -287,7 +292,9 @@ SPECTACULAR_SETTINGS = {
     'LICENSE': {'name': 'Proprietary'},
     'SERVE_INCLUDE_SCHEMA': False,
     'SCHEMA_PATH_PREFIX': r'/api/v1',
-    'SCHEMA_PATH_PREFIX_TRIM': True,
+    # Keep full URLs in Swagger (e.g. /api/v1/auth/login/) so frontend devs can
+    # copy/paste endpoints directly without guessing the prefix.
+    'SCHEMA_PATH_PREFIX_TRIM': False,
     'COMPONENT_SPLIT_REQUEST': True,
     'SORT_OPERATIONS': True,
     'TAGS': API_TAGS,
@@ -332,6 +339,9 @@ SPECTACULAR_SETTINGS = {
     'SECURITY': [{'BearerAuth': []}],
     'PREPROCESSING_HOOKS': [
         'config.openapi_hooks.preprocess_exclude_admin',
+    ],
+    'POSTPROCESSING_HOOKS': [
+        'config.openapi_hooks.postprocess_normalize_tags',
     ],
 }
 

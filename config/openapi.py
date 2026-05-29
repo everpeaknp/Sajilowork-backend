@@ -85,4 +85,52 @@ API_TAGS = [
         'name': 'Analytics',
         'description': 'Analytics and reporting endpoints.',
     },
+    {
+        'name': 'Blog',
+        'description': 'Public blog posts and featured articles.',
+    },
+    {
+        'name': 'Disputes',
+        'description': 'Task disputes, evidence, and resolution workflow.',
+    },
+    {
+        'name': 'Rules',
+        'description': 'Platform rules, moderation policies, and account enforcement.',
+    },
 ]
+
+
+# drf-spectacular auto-tags operations from the first URL segment after /api/v1/
+# (e.g. "analytics"). We declare human-friendly tags in API_TAGS (e.g. "Analytics").
+# This map merges the two so Swagger UI shows a single group per domain.
+URL_SEGMENT_TAG_ALIASES = {
+    'auth': 'Authentication',
+    'analytics': 'Analytics',
+    'bids': 'Bids',
+    'blog': 'Blog',
+    'chat': 'Chat',
+    'dashboard': 'Dashboard',
+    'disputes': 'Disputes',
+    'fees': 'Fees',
+    'locations': 'Locations',
+    'notifications': 'Notifications',
+    'payments': 'Payments',
+    'reviews': 'Reviews',
+    'rules': 'Rules',
+    'search': 'Search',
+    'tasks': 'Tasks',
+    'uploads': 'Uploads',
+    'users': 'Users',
+    'wallets': 'Wallets',
+}
+
+
+def build_tag_alias_map() -> dict[str, str]:
+    """Lowercase alias -> canonical tag name used in Swagger UI."""
+    aliases: dict[str, str] = {}
+    for tag in API_TAGS:
+        name = tag['name']
+        aliases[name.lower()] = name
+    for segment, canonical in URL_SEGMENT_TAG_ALIASES.items():
+        aliases.setdefault(segment.lower(), canonical)
+    return aliases

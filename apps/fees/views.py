@@ -5,6 +5,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from .engine import FeeContext, FeeEngine
 from .models import FeeRule, FeeTransaction
@@ -13,18 +14,44 @@ from .serializers import (
     FeeCalculateOutputSerializer,
     WithdrawalFeeInputSerializer,
     CancellationFeeInputSerializer,
+    WithdrawalFeeOutputSerializer,
+    CancellationFeeOutputSerializer,
+    FeeRuleSerializer,
     build_fee_context,
 )
 
 
-class FeeCalculateViewSet(viewsets.ViewSet):
+class FeeCalculateViewSet(viewsets.GenericViewSet):
     """
     Public fee calculation API (server-side only — clients must not compute fees).
     """
 
     permission_classes = [IsAuthenticated]
+    serializer_class = FeeCalculateInputSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'calculate':
+            return FeeCalculateInputSerializer
+        if self.action == 'withdrawal':
+            return WithdrawalFeeInputSerializer
+        if self.action == 'cancellation':
+            return CancellationFeeInputSerializer
+        return FeeCalculateInputSerializer
 
     @action(detail=False, methods=['post'], url_path='calculate')
+    @extend_schema(
+        tags=['Fees'],
+        summary='Calculate task fee breakdown',
+        request=FeeCalculateInputSerializer,
+        responses={200: FeeCalculateOutputSerializer},
+        examples=[
+            OpenApiExample(
+                'Example request',
+                value={'task_amount': '5000.00', 'payment_method': 'wallet'},
+                request_only=True,
+            ),
+        ],
+    )
     def calculate(self, request):
         """
         POST /api/v1/fees/calculate/
@@ -69,6 +96,12 @@ class FeeCalculateViewSet(viewsets.ViewSet):
         return Response(out.data)
 
     @action(detail=False, methods=['post'], url_path='withdrawal')
+    @extend_schema(
+        tags=['Fees'],
+        summary='Calculate withdrawal fee',
+        request=WithdrawalFeeInputSerializer,
+        responses={200: WithdrawalFeeOutputSerializer},
+    )
     def withdrawal(self, request):
         serializer = WithdrawalFeeInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -78,14 +111,20 @@ class FeeCalculateViewSet(viewsets.ViewSet):
             data['withdrawal_method'],
         )
         net = Decimal(str(data['amount'])) - line.amount
-        return Response({
+        return Response(WithdrawalFeeOutputSerializer({
             'withdrawal_fee': line.amount,
             'net_amount': net,
             'rule_id': line.rule_id,
             'rule_name': line.rule_name,
-        })
+        }).data)
 
     @action(detail=False, methods=['post'], url_path='cancellation')
+    @extend_schema(
+        tags=['Fees'],
+        summary='Calculate cancellation fee',
+        request=CancellationFeeInputSerializer,
+        responses={200: CancellationFeeOutputSerializer},
+    )
     def cancellation(self, request):
         serializer = CancellationFeeInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -94,12 +133,12 @@ class FeeCalculateViewSet(viewsets.ViewSet):
             data['task_amount'],
             data['stage'],
         )
-        return Response({
+        return Response(CancellationFeeOutputSerializer({
             'cancellation_fee': line.amount,
             'stage': data['stage'],
             'rule_id': line.rule_id,
             'rule_name': line.rule_name,
-        })
+        }).data)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
     def analytics(self, request):
@@ -130,19 +169,4 @@ class FeeRuleViewSet(viewsets.ReadOnlyModelViewSet):
 
     permission_classes = [IsAdminUser]
     queryset = FeeRule.objects.filter(is_active=True).order_by('-priority')
-    serializer_class = None
-
-    def list(self, request, *args, **kwargs):
-        rules = self.get_queryset()
-        data = [
-            {
-                'id': str(r.id),
-                'name': r.name,
-                'fee_type': r.fee_type,
-                'value_type': r.value_type,
-                'value': str(r.value),
-                'priority': r.priority,
-            }
-            for r in rules
-        ]
-        return Response(data)
+    serializer_class = FeeRuleSerializer
