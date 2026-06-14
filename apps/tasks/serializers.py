@@ -194,7 +194,8 @@ class TaskListSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
         return TaskBookmark.objects.filter(user=request.user, task=obj).exists()
 
     def get_listing_kind(self, obj):
-        return get_listing_kind(obj.tags)
+        kind = get_listing_kind(obj.tags)
+        return kind or LISTING_KIND_TASK
 
     def get_primary_image(self, obj):
         return _resolve_primary_image_url(obj, self.context.get('request'))
@@ -247,7 +248,7 @@ class TaskListSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
             # pins for each task. Without them every task falls back to the
             # frontend's default fallback coordinates.
             'latitude', 'longitude',
-            'category', 'category_name', 'listing_kind', 'primary_image', 'owner', 'owner_name',
+            'category', 'category_name', 'listing_kind', 'tags', 'primary_image', 'owner', 'owner_name',
             'owner_username', 'owner_image', 'owner_logo_url', 'owner_logo_text', 'owner_logo_color',
             'owner_business_name', 'owner_rating', 'owner_is_verified', 'assigned_tasker', 'due_date',
             'is_public', 'is_open', 'is_overdue', 'is_bookmarked', 'views_count', 'bids_count', 'created_at'
@@ -289,7 +290,8 @@ class TaskDetailSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
     listing_kind = serializers.SerializerMethodField()
 
     def get_listing_kind(self, obj):
-        return get_listing_kind(obj.tags)
+        kind = get_listing_kind(obj.tags)
+        return kind or LISTING_KIND_TASK
 
     def get_primary_image(self, obj):
         return _resolve_primary_image_url(obj, self.context.get('request'))

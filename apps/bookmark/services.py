@@ -1,4 +1,6 @@
 """Bookmark business logic shared by tasks and bookmark APIs."""
+from uuid import UUID
+
 from django.shortcuts import get_object_or_404
 
 from apps.tasks.listing import (
@@ -12,7 +14,18 @@ from apps.tasks.models import Task, TaskBookmark
 
 
 def get_bookmarkable_task(slug: str) -> Task:
-    return get_object_or_404(Task, slug=slug)
+    normalized = (slug or '').strip()
+    if not normalized:
+        raise Task.DoesNotExist
+    try:
+        return Task.objects.get(slug=normalized)
+    except Task.DoesNotExist:
+        pass
+    try:
+        UUID(normalized)
+    except ValueError:
+        return get_object_or_404(Task, slug=normalized)
+    return get_object_or_404(Task, pk=normalized)
 
 
 def add_bookmark(user, task: Task) -> tuple[TaskBookmark, bool]:
