@@ -351,6 +351,10 @@ SPECTACULAR_SETTINGS = {
     'POSTPROCESSING_HOOKS': [
         'config.openapi_hooks.postprocess_normalize_tags',
     ],
+    # Avoid OSError on Windows when SpectacularAPIView prints many warnings to
+    # stderr under ASGI (Python 3.14 + runserver). Use `manage.py spectacular`
+    # locally if you need the full warning list.
+    'DISABLE_ERRORS_AND_WARNINGS': True,
 }
 
 # Security Settings

@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from apps.tasks.models import TaskQuestion
 from apps.tasks.permissions import IsTaskOwner
+from apps.tasks.question_utils import block_owner_asking_question
 from apps.tasks.serializers import TaskQuestionSerializer
 from apps.bookmark.mixins import BookmarkSerializerContextMixin
 from .models import Project
@@ -77,6 +78,8 @@ class ProjectViewSet(BookmarkSerializerContextMixin, viewsets.ModelViewSet):
             return [IsAuthenticated(), IsTaskOwner()]
         if self.action == 'mine':
             return [IsAuthenticated()]
+        if self.action in ('ask_question', 'answer_question'):
+            return [IsAuthenticated()]
         return super().get_permissions()
 
     def create(self, request, *args, **kwargs):
@@ -121,11 +124,16 @@ class ProjectViewSet(BookmarkSerializerContextMixin, viewsets.ModelViewSet):
         """Ask a question about the project (freelancers / non-owners)."""
         project = self.get_object()
 
+        blocked = block_owner_asking_question(project, request.user)
+        if blocked is not None:
+            return blocked
+
         serializer = TaskQuestionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(task=project, asked_by=request.user)
+        question = serializer.save(task=project, asked_by=request.user)
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        output = TaskQuestionSerializer(question, context={'request': request})
+        return Response(output.data, status=status.HTTP_201_CREATED)
 
     @action(
         detail=True,

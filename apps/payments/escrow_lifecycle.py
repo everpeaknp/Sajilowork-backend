@@ -128,6 +128,7 @@ class EscrowLifecycleService:
             task_amount,
             payment_method=provider,
             category_id=getattr(task, 'category_id', None),
+            task=task,
         )
         hold_amount = fees['poster_total_held']
 

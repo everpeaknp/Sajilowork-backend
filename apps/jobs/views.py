@@ -19,7 +19,7 @@ from rest_framework.response import Response
 from apps.tasks.models import TaskQuestion
 
 from apps.tasks.permissions import IsTaskOwner
-
+from apps.tasks.question_utils import block_owner_asking_question
 from apps.tasks.serializers import TaskQuestionSerializer
 
 from apps.bookmark.mixins import BookmarkSerializerContextMixin
@@ -243,17 +243,19 @@ class JobViewSet(BookmarkSerializerContextMixin, viewsets.ModelViewSet):
 
         job = self.get_object()
 
-
+        blocked = block_owner_asking_question(job, request.user)
+        if blocked is not None:
+            return blocked
 
         serializer = TaskQuestionSerializer(data=request.data)
 
         serializer.is_valid(raise_exception=True)
 
-        serializer.save(task=job, asked_by=request.user)
+        question = serializer.save(task=job, asked_by=request.user)
 
+        output = TaskQuestionSerializer(question, context={'request': request})
 
-
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(output.data, status=status.HTTP_201_CREATED)
 
 
 

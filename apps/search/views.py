@@ -52,6 +52,7 @@ class SearchViewSet(viewsets.ViewSet):
         
         # Extract filters
         filters = {
+            'listing_kind': data.get('listing_kind'),
             'category': data.get('category'),
             'min_budget': data.get('min_budget'),
             'max_budget': data.get('max_budget'),
@@ -82,7 +83,9 @@ class SearchViewSet(viewsets.ViewSet):
             paginator = Paginator(queryset, page_size)
             page_obj = paginator.get_page(page)
             
-            results = TaskSearchResultSerializer(page_obj, many=True).data
+            results = TaskSearchResultSerializer(
+                page_obj, many=True, context={'request': request}
+            ).data
             
         elif search_type == 'taskers':
             queryset = SearchService.search_taskers(query, filters, request.user if request.user.is_authenticated else None)
@@ -111,7 +114,9 @@ class SearchViewSet(viewsets.ViewSet):
             categories = SearchService.search_categories(query, filters, request.user if request.user.is_authenticated else None)[:5]
             
             results = {
-                'tasks': TaskSearchResultSerializer(tasks, many=True).data,
+                'tasks': TaskSearchResultSerializer(
+                    tasks, many=True, context={'request': request}
+                ).data,
                 'taskers': TaskerSearchResultSerializer(taskers, many=True).data,
                 'categories': CategorySearchResultSerializer(categories, many=True).data,
             }
@@ -277,7 +282,9 @@ class SavedSearchViewSet(viewsets.ModelViewSet):
                 filters,
                 request.user
             )
-            results = TaskSearchResultSerializer(queryset[:20], many=True).data
+            results = TaskSearchResultSerializer(
+                queryset[:20], many=True, context={'request': request}
+            ).data
         elif saved_search.search_type == 'taskers':
             queryset = SearchService.search_taskers(
                 saved_search.query,

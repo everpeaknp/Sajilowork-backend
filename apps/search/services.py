@@ -13,6 +13,12 @@ from apps.search.models import (
     SearchSuggestion, SearchFilter
 )
 from apps.tasks.models import Task, Category
+from apps.tasks.listing import (
+    LISTING_KIND_CHOICES,
+    LISTING_KIND_TASK,
+    filter_queryset_by_listing_kind,
+    filter_queryset_plain_tasks,
+)
 from apps.users.models import User
 
 
@@ -32,12 +38,18 @@ class SearchService:
         Returns:
             QuerySet of tasks
         """
-        tasks = Task.objects.filter(status='open').select_related(
-            'owner', 'category'
+        tasks = Task.objects.filter(status='open', is_public=True).select_related(
+            'owner', 'owner__employer_profile', 'category'
         ).annotate(
             bid_count=Count('bids')
         )
-        
+
+        listing_kind = filters.get('listing_kind')
+        if listing_kind in LISTING_KIND_CHOICES:
+            tasks = filter_queryset_by_listing_kind(tasks, listing_kind)
+        elif listing_kind == LISTING_KIND_TASK:
+            tasks = filter_queryset_plain_tasks(tasks)
+
         # Text search
         if query:
             tasks = tasks.filter(
@@ -53,9 +65,9 @@ class SearchService:
         
         # Budget filters
         if filters.get('min_budget'):
-            tasks = tasks.filter(budget__gte=filters['min_budget'])
+            tasks = tasks.filter(budget_amount__gte=filters['min_budget'])
         if filters.get('max_budget'):
-            tasks = tasks.filter(budget__lte=filters['max_budget'])
+            tasks = tasks.filter(budget_amount__lte=filters['max_budget'])
         
         # Budget type filter
         if filters.get('budget_type'):
@@ -235,9 +247,9 @@ class SearchService:
         if sort_by == 'date':
             return queryset.order_by('-created_at')
         elif sort_by == 'budget_asc':
-            return queryset.order_by('budget')
+            return queryset.order_by('budget_amount')
         elif sort_by == 'budget_desc':
-            return queryset.order_by('-budget')
+            return queryset.order_by('-budget_amount')
         elif sort_by == 'popularity':
             return queryset.order_by('-bid_count', '-created_at')
         elif sort_by == 'distance':

@@ -27,6 +27,7 @@ class FeeContext:
     """Optional filters when resolving fee rules."""
 
     category_id: Optional[str] = None
+    listing_kind: str = ''
     user_tier: str = ''
     cancellation_stage: str = ''
     withdrawal_method: str = ''
@@ -69,6 +70,9 @@ class FeeEngine:
                 continue
             if rule.category_id:
                 if not ctx.category_id or str(rule.category_id) != str(ctx.category_id):
+                    continue
+            if rule.listing_kind:
+                if not ctx.listing_kind or rule.listing_kind != ctx.listing_kind:
                     continue
             if rule.user_tier and rule.user_tier != ctx.user_tier:
                 continue

@@ -14,6 +14,7 @@ class FeeRuleAdmin(admin.ModelAdmin):
     list_display = [
         'name',
         'fee_type',
+        'listing_kind',
         'applies_to',
         'value_display',
         'priority',
@@ -24,7 +25,7 @@ class FeeRuleAdmin(admin.ModelAdmin):
         'withdrawal_method',
         'updated_at',
     ]
-    list_filter = ['fee_type', 'is_active', 'value_type', 'category']
+    list_filter = ['fee_type', 'listing_kind', 'is_active', 'value_type', 'category']
     search_fields = ['name']
     list_editable = ['is_active', 'priority']
     ordering = ['-priority', 'fee_type']
@@ -49,12 +50,13 @@ class FeeRuleAdmin(admin.ModelAdmin):
         }),
         ('Targeting (optional)', {
             'fields': (
+                'listing_kind',
                 'category',
                 'user_tier',
                 'cancellation_stage',
                 'withdrawal_method',
             ),
-            'description': 'Leave blank to apply to all matching transactions.',
+            'description': 'Set listing kind for task/project/service-specific rates. Leave blank to apply to all matching transactions.',
         }),
         ('Timestamps', {'fields': ('created_at', 'updated_at')}),
     )

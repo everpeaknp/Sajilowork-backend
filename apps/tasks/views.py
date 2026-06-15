@@ -9,7 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 from django.db import transaction
-from django.db.models import Q, Count, Avg, Sum
+from django.db.models import Prefetch, Q, Count, Avg, Sum
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
@@ -30,12 +30,14 @@ from .serializers import (
     TaskListSerializer, TaskDetailSerializer, TaskCreateSerializer,
     TaskUpdateSerializer, TaskStatusSerializer, CategorySerializer,
     TaskAttachmentSerializer, TaskBookmarkSerializer, TaskQuestionSerializer,
+    DashboardTaskQuestionSerializer,
     TaskReportSerializer, TaskStatsSerializer
 )
 from apps.users.permissions import IsOwner, IsCustomer, IsTasker
 from apps.bookmark.mixins import BookmarkSerializerContextMixin
 from apps.bookmark.services import add_bookmark, list_bookmarked_tasks, remove_bookmark
 from .permissions import IsTaskOwner, IsTaskOwnerOrReadOnly, CanCreateTask
+from .question_utils import block_owner_asking_question
 from .listing import (
     LISTING_KIND_CHOICES,
     LISTING_KIND_CATEGORY_CHOICES,
@@ -105,7 +107,13 @@ class TaskViewSet(BookmarkSerializerContextMixin, viewsets.ModelViewSet):
 
         return queryset.select_related(
             'owner', 'owner__employer_profile', 'category', 'assigned_tasker'
-        ).prefetch_related('attachments')
+        ).prefetch_related(
+            'attachments',
+            Prefetch(
+                'questions',
+                queryset=TaskQuestion.objects.select_related('asked_by').order_by('-created_at'),
+            ),
+        )
     
     def filter_queryset(self, queryset):
         """Apply DRF filters plus optional listing_kind query param."""
@@ -146,6 +154,7 @@ class TaskViewSet(BookmarkSerializerContextMixin, viewsets.ModelViewSet):
             'assigned_tasks',
             'bookmarked',
             'stats',
+            'dashboard_questions',
             'update_status',
             'confirm_work_complete',
             'bookmark',
@@ -574,17 +583,55 @@ class TaskViewSet(BookmarkSerializerContextMixin, viewsets.ModelViewSet):
         
         serializer = TaskStatsSerializer(stats)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated], url_path='dashboard_questions')
+    def dashboard_questions(self, request):
+        """
+        GET /api/v1/tasks/dashboard_questions/?view=received|asked
+        received — questions on listings you own (employer inbox)
+        asked — questions you posted on other listings (freelancer inbox)
+        """
+        view = (request.query_params.get('view') or 'received').strip().lower()
+        if view == 'asked':
+            queryset = TaskQuestion.objects.filter(
+                asked_by=request.user,
+                is_public=True,
+            )
+        else:
+            queryset = TaskQuestion.objects.filter(
+                task__owner=request.user,
+                is_public=True,
+            )
+
+        queryset = queryset.select_related(
+            'task', 'asked_by', 'task__owner',
+        ).order_by('-created_at')
+
+        page = self.paginate_queryset(queryset)
+        serializer_class = DashboardTaskQuestionSerializer
+        context = {'request': request}
+        if page is not None:
+            serializer = serializer_class(page, many=True, context=context)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = serializer_class(queryset, many=True, context=context)
+        return Response(serializer.data)
     
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def ask_question(self, request, slug=None):
         """Ask a question about the task."""
         task = self.get_object()
-        
+
+        blocked = block_owner_asking_question(task, request.user)
+        if blocked is not None:
+            return blocked
+
         serializer = TaskQuestionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(task=task, asked_by=request.user)
-        
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        question = serializer.save(task=task, asked_by=request.user)
+
+        output = TaskQuestionSerializer(question, context={'request': request})
+        return Response(output.data, status=status.HTTP_201_CREATED)
 
     @action(
         detail=True,

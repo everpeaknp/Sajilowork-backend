@@ -86,21 +86,110 @@ class TaskAttachmentSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'uploaded_by', 'uploaded_at']
 
 
+def _resolve_user_profile_image_url(user, request=None):
+    if not user or not getattr(user, 'profile_image', None):
+        return None
+    try:
+        url = user.profile_image.url
+    except (ValueError, AttributeError):
+        return None
+    if request:
+        return request.build_absolute_uri(url)
+    return url
+
+
 class TaskQuestionSerializer(serializers.ModelSerializer):
     """Serializer for task questions."""
-    
-    asked_by_name = serializers.CharField(source='asked_by.get_full_name', read_only=True)
-    asked_by_image = serializers.URLField(source='asked_by.profile_image', read_only=True)
+
+    asked_by_name = serializers.SerializerMethodField()
+    asked_by_image = serializers.SerializerMethodField()
     is_answered = serializers.BooleanField(read_only=True)
-    
+
     class Meta:
         model = TaskQuestion
         fields = [
             'id', 'question', 'answer', 'asked_by', 'asked_by_name',
             'asked_by_image', 'is_answered', 'is_public',
-            'created_at', 'answered_at'
+            'created_at', 'answered_at',
         ]
         read_only_fields = ['id', 'asked_by', 'answered_at', 'created_at']
+
+    def get_asked_by_name(self, obj):
+        asked_by = getattr(obj, 'asked_by', None)
+        if not asked_by:
+            return 'User'
+        return asked_by.get_full_name() or getattr(asked_by, 'username', None) or 'User'
+
+    def get_asked_by_image(self, obj):
+        return _resolve_user_profile_image_url(
+            getattr(obj, 'asked_by', None),
+            self.context.get('request'),
+        )
+
+    def validate_question(self, value):
+        trimmed = (value or '').strip()
+        if not trimmed:
+            raise serializers.ValidationError('Question cannot be empty.')
+        return trimmed
+
+
+def serialize_listing_questions(task, request):
+    """Public users see only public questions; owners see all."""
+    queryset = task.questions.select_related('asked_by').order_by('-created_at')
+    user = getattr(request, 'user', None)
+    if not user or not user.is_authenticated or task.owner_id != user.id:
+        queryset = queryset.filter(is_public=True)
+    return TaskQuestionSerializer(
+        queryset,
+        many=True,
+        context={'request': request},
+    ).data
+
+
+class DashboardTaskQuestionSerializer(serializers.ModelSerializer):
+    """Task question with listing context for dashboard inbox."""
+
+    asked_by_name = serializers.CharField(source='asked_by.get_full_name', read_only=True)
+    asked_by_image = serializers.SerializerMethodField()
+    task_id = serializers.UUIDField(source='task.id', read_only=True)
+    task_title = serializers.CharField(source='task.title', read_only=True)
+    task_slug = serializers.CharField(source='task.slug', read_only=True)
+    task_listing_kind = serializers.SerializerMethodField()
+    can_answer = serializers.SerializerMethodField()
+    is_answered = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = TaskQuestion
+        fields = [
+            'id', 'question', 'answer', 'asked_by', 'asked_by_name',
+            'asked_by_image', 'is_answered', 'is_public',
+            'created_at', 'answered_at',
+            'task_id', 'task_title', 'task_slug', 'task_listing_kind', 'can_answer',
+        ]
+        read_only_fields = fields
+
+    def get_asked_by_image(self, obj):
+        asked_by = getattr(obj, 'asked_by', None)
+        if not asked_by or not getattr(asked_by, 'profile_image', None):
+            return None
+        try:
+            url = asked_by.profile_image.url
+        except (ValueError, AttributeError):
+            return None
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
+    def get_task_listing_kind(self, obj):
+        kind = get_listing_kind(getattr(obj.task, 'tags', None))
+        return kind or LISTING_KIND_TASK
+
+    def get_can_answer(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.task.owner_id == request.user.id
 
 
 def _get_owner_employer_profile(task):
@@ -128,12 +217,17 @@ class TaskOwnerEmployerMixin:
 
     def get_owner_logo_url(self, obj):
         profile = _get_owner_employer_profile(obj)
-        if not profile or not profile.logo_image:
-            return None
-        request = self.context.get('request')
-        if not request:
-            return None
-        return resolve_employer_image_url(request, profile.logo_image)
+        if profile and profile.logo_image:
+            request = self.context.get('request')
+            return resolve_employer_image_url(request, profile.logo_image)
+        owner = getattr(obj, 'owner', None)
+        return _resolve_user_profile_image_url(owner, self.context.get('request'))
+
+    def get_owner_display_name(self, obj):
+        profile = _get_owner_employer_profile(obj)
+        if profile and profile.company_name.strip():
+            return profile.company_name.strip()
+        return _resolve_owner_personal_name(getattr(obj, 'owner', None))
 
     def get_owner_logo_text(self, obj):
         profile = _get_owner_employer_profile(obj)
@@ -281,7 +375,7 @@ class TaskDetailSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     primary_image = serializers.SerializerMethodField()
     attachments = serializers.SerializerMethodField()
-    questions = TaskQuestionSerializer(many=True, read_only=True)
+    questions = serializers.SerializerMethodField()
     is_open = serializers.BooleanField(read_only=True)
     is_completed = serializers.BooleanField(read_only=True)
     is_overdue = serializers.BooleanField(read_only=True)
@@ -328,6 +422,9 @@ class TaskDetailSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
     def get_attachments(self, obj):
         ordered = _ordered_attachments(obj)
         return TaskAttachmentSerializer(ordered, many=True, context=self.context).data
+
+    def get_questions(self, obj):
+        return serialize_listing_questions(obj, self.context.get('request'))
     
     class Meta:
         model = Task
@@ -473,6 +570,9 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         # appears as a live "Posted" task, not a draft in "Booking requests".
         if task.status == 'draft':
             task.publish()
+        elif task.status == 'open' and not task.allow_bids:
+            task.allow_bids = True
+            task.save(update_fields=['allow_bids'])
         return task
 
 

@@ -8,6 +8,7 @@ from apps.search.models import (
     SearchSuggestion, SearchFilter
 )
 from apps.tasks.models import Task, Category
+from apps.tasks.serializers import TaskOwnerEmployerMixin, _resolve_owner_personal_name
 from apps.users.models import User
 
 
@@ -87,13 +88,21 @@ class SearchFilterSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'usage_count']
 
 
-class TaskSearchResultSerializer(serializers.ModelSerializer):
-    """Serializer for task search results"""
-    owner_name = serializers.CharField(source='owner.get_full_name', read_only=True)
-    owner_avatar = serializers.ImageField(source='owner.avatar', read_only=True)
+class TaskSearchResultSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
+    """Serializer for task search results (includes employer business branding)."""
+    owner_name = serializers.SerializerMethodField()
+    owner_username = serializers.SerializerMethodField()
+    owner_image = serializers.SerializerMethodField()
+    owner_logo_url = serializers.SerializerMethodField()
+    owner_logo_text = serializers.SerializerMethodField()
+    owner_logo_color = serializers.SerializerMethodField()
+    owner_business_name = serializers.SerializerMethodField()
+    owner_is_verified = serializers.SerializerMethodField()
     category_name = serializers.CharField(source='category.name', read_only=True)
     category_slug = serializers.CharField(source='category.slug', read_only=True)
-    bid_count = serializers.IntegerField(read_only=True)
+    budget = serializers.DecimalField(source='budget_amount', max_digits=10, decimal_places=2, read_only=True)
+    location = serializers.SerializerMethodField()
+    bid_count = serializers.IntegerField(source='bids_count', read_only=True)
     distance = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -101,14 +110,50 @@ class TaskSearchResultSerializer(serializers.ModelSerializer):
         required=False,
         help_text='Distance in kilometers (if location-based search)'
     )
-    
+
+    def get_owner_name(self, obj):
+        business_name = self.get_owner_business_name(obj)
+        if business_name:
+            return business_name
+        return _resolve_owner_personal_name(getattr(obj, 'owner', None))
+
+    def get_owner_username(self, obj):
+        owner = getattr(obj, 'owner', None)
+        if not owner:
+            return ''
+        return (getattr(owner, 'username', None) or '').strip()
+
+    def get_owner_image(self, obj):
+        owner = getattr(obj, 'owner', None)
+        if not owner or not getattr(owner, 'profile_image', None):
+            return None
+        try:
+            url = owner.profile_image.url
+        except (ValueError, AttributeError):
+            return None
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
+    def get_owner_is_verified(self, obj):
+        owner = getattr(obj, 'owner', None)
+        return bool(owner and getattr(owner, 'is_verified_tasker', False))
+
+    def get_location(self, obj):
+        parts = [obj.city, obj.state, obj.country]
+        label = ', '.join(p for p in parts if p)
+        return label or obj.address or ''
+
     class Meta:
         model = Task
         fields = [
             'id', 'title', 'slug', 'description', 'status',
             'budget', 'budget_type', 'work_type', 'location',
             'latitude', 'longitude', 'due_date', 'urgency',
-            'owner', 'owner_name', 'owner_avatar',
+            'owner', 'owner_name', 'owner_username', 'owner_image',
+            'owner_logo_url', 'owner_logo_text', 'owner_logo_color',
+            'owner_business_name', 'owner_is_verified',
             'category', 'category_name', 'category_slug',
             'bid_count', 'distance', 'created_at'
         ]
@@ -187,7 +232,12 @@ class SearchRequestSerializer(serializers.Serializer):
         default='tasks',
         help_text='Type of search to perform'
     )
-    
+    listing_kind = serializers.ChoiceField(
+        choices=['task', 'job', 'project', 'service'],
+        required=False,
+        help_text='Filter task results by marketplace listing type (jobs, projects, services, or plain tasks)',
+    )
+
     # Task filters
     category = serializers.IntegerField(
         required=False,

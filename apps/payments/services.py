@@ -281,6 +281,7 @@ class EscrowService:
             bid.amount,
             payment_method='wallet',
             category_id=getattr(bid.task, 'category_id', None),
+            task=bid.task,
         )
         return breakdown['poster_total_held']
 

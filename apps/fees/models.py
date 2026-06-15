@@ -38,6 +38,12 @@ class FeeRule(models.Model):
         AFTER_ACCEPT = 'AFTER_ACCEPT', 'After bid accepted'
         IN_PROGRESS = 'IN_PROGRESS', 'Task in progress'
 
+    class ListingKind(models.TextChoices):
+        TASK = 'task', 'Task (marketplace)'
+        PROJECT = 'project', 'Project'
+        SERVICE = 'service', 'Service'
+        JOB = 'job', 'Job'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=120)
     fee_type = models.CharField(max_length=20, choices=FeeType.choices, db_index=True)
@@ -82,6 +88,14 @@ class FeeRule(models.Model):
         blank=True,
         related_name='fee_rules',
     )
+    listing_kind = models.CharField(
+        max_length=16,
+        choices=ListingKind.choices,
+        blank=True,
+        default='',
+        db_index=True,
+        help_text='Apply only to this listing type (task, project, service, job). Blank = all types.',
+    )
     user_tier = models.CharField(
         max_length=32,
         blank=True,
@@ -109,6 +123,7 @@ class FeeRule(models.Model):
         ordering = ['-priority', 'fee_type', 'name']
         indexes = [
             models.Index(fields=['fee_type', 'is_active', '-priority']),
+            models.Index(fields=['listing_kind', 'fee_type', 'is_active']),
             models.Index(fields=['cancellation_stage']),
             models.Index(fields=['withdrawal_method']),
         ]

@@ -47,6 +47,7 @@ class BidListSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
     task_owner_logo_text = serializers.SerializerMethodField()
     task_owner_logo_color = serializers.SerializerMethodField()
     task_owner_business_name = serializers.SerializerMethodField()
+    task_owner_name = serializers.SerializerMethodField()
     is_pending = serializers.BooleanField(read_only=True)
     is_accepted = serializers.BooleanField(read_only=True)
     
@@ -55,7 +56,7 @@ class BidListSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
         fields = [
             'id', 'task', 'task_title', 'task_slug', 'task_city', 'task_listing_kind', 'tasker',
             'task_owner_logo_url', 'task_owner_logo_text', 'task_owner_logo_color',
-            'task_owner_business_name',
+            'task_owner_business_name', 'task_owner_name',
             'amount', 'currency',
             'proposal', 'estimated_duration', 'estimated_completion_date',
             'status', 'is_pending', 'is_accepted', 'is_counter_offer',
@@ -77,6 +78,9 @@ class BidListSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
 
     def get_task_owner_business_name(self, obj):
         return self.get_owner_business_name(obj.task)
+
+    def get_task_owner_name(self, obj):
+        return self.get_owner_display_name(obj.task)
 
 
 class BidDetailSerializer(serializers.ModelSerializer):

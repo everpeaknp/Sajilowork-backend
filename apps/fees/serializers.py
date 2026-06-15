@@ -9,6 +9,12 @@ from .models import FeeRule
 class FeeCalculateInputSerializer(serializers.Serializer):
     task_amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal('0.01'))
     category_id = serializers.UUIDField(required=False, allow_null=True)
+    listing_kind = serializers.ChoiceField(
+        choices=['task', 'project', 'service', 'job'],
+        required=False,
+        allow_blank=True,
+        default='',
+    )
     user_tier = serializers.CharField(required=False, allow_blank=True, default='')
     cancellation_stage = serializers.CharField(required=False, allow_blank=True, default='')
     withdrawal_method = serializers.CharField(required=False, allow_blank=True, default='')
@@ -95,6 +101,7 @@ class FeeRuleSerializer(serializers.ModelSerializer):
             'min_amount',
             'max_amount',
             'category',
+            'listing_kind',
             'user_tier',
             'cancellation_stage',
             'withdrawal_method',
@@ -111,6 +118,7 @@ class FeeRuleSerializer(serializers.ModelSerializer):
 def build_fee_context(validated_data) -> FeeContext:
     return FeeContext(
         category_id=str(validated_data['category_id']) if validated_data.get('category_id') else None,
+        listing_kind=validated_data.get('listing_kind', '') or '',
         user_tier=validated_data.get('user_tier', ''),
         cancellation_stage=validated_data.get('cancellation_stage', ''),
         withdrawal_method=validated_data.get('withdrawal_method', ''),

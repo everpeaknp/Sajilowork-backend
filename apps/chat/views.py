@@ -7,6 +7,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.db.models import Q, Count, Max
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+
 from .models import (
     Conversation, Message, TypingIndicator,
     MessageReaction, ConversationMute, MessageReport
@@ -21,6 +23,20 @@ from .permissions import IsConversationParticipant, IsMessageSender
 from .realtime import broadcast_chat_message
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Chat'],
+        summary='List conversations',
+        parameters=[
+            OpenApiParameter('view', str, description='employer or tasker inbox filter'),
+            OpenApiParameter('archived', bool, description='Include archived threads'),
+            OpenApiParameter('task', str, description='Filter by task UUID'),
+            OpenApiParameter('bid', str, description='Filter by bid UUID'),
+        ],
+    ),
+    retrieve=extend_schema(tags=['Chat'], summary='Get conversation details'),
+    create=extend_schema(tags=['Chat'], summary='Create or resolve conversation'),
+)
 class ConversationViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing conversations.
@@ -33,11 +49,21 @@ class ConversationViewSet(viewsets.ModelViewSet):
         queryset = Conversation.objects.filter(
             participants=user,
             is_active=True
-        ).select_related('task', 'bid', 'bid__task').prefetch_related('participants')
+        ).select_related('task', 'task__owner', 'bid', 'bid__task', 'bid__task__owner').prefetch_related('participants')
         
         # Filter by archived status
         is_archived = self.request.query_params.get('archived', 'false').lower() == 'true'
         queryset = queryset.filter(is_archived=is_archived)
+
+        view = (self.request.query_params.get('view') or '').strip().lower()
+        if view in ('employer', 'customer', 'received'):
+            queryset = queryset.filter(
+                Q(task__owner=user) | Q(bid__task__owner=user),
+            )
+        elif view in ('tasker', 'freelancer', 'asked'):
+            queryset = queryset.exclude(
+                Q(task__owner=user) | Q(bid__task__owner=user),
+            )
         
         # Filter by task or bid
         task_id = self.request.query_params.get('task')
@@ -69,6 +95,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation.mark_as_read(request.user)
         return Response({'status': 'messages marked as read'})
 
+    @extend_schema(tags=['Chat'], summary='List or send messages in conversation')
     @action(detail=True, methods=['get', 'post'], url_path='messages')
     def messages(self, request, pk=None):
         """List or create messages in this conversation."""
@@ -117,6 +144,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation.save(update_fields=['is_archived'])
         return Response({'status': 'conversation unarchived'})
     
+    @extend_schema(tags=['Chat'], summary='Total unread message count')
     @action(detail=False, methods=['get'])
     def unread_count(self, request):
         """Get total unread message count across all conversations."""
@@ -130,6 +158,10 @@ class ConversationViewSet(viewsets.ModelViewSet):
         return Response({'unread_count': total_unread})
 
 
+@extend_schema_view(
+    list=extend_schema(tags=['Chat'], summary='List messages'),
+    create=extend_schema(tags=['Chat'], summary='Send a message'),
+)
 class MessageViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing messages.

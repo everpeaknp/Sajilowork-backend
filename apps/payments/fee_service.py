@@ -9,6 +9,7 @@ from django.conf import settings as django_settings
 from django.core.exceptions import ValidationError
 
 from apps.fees.engine import FeeContext, FeeEngine
+from apps.fees.listing import fee_listing_kind_for_task
 
 
 class PlatformFeeService:
@@ -21,21 +22,32 @@ class PlatformFeeService:
         payment_method: str = 'wallet',
         category_id=None,
         user_tier: str = '',
+        task=None,
+        listing_kind: str = '',
     ) -> dict:
         ctx = FeeContext(
             payment_method=payment_method,
             category_id=str(category_id) if category_id else None,
             user_tier=user_tier or '',
+            listing_kind=listing_kind or fee_listing_kind_for_task(task),
         )
         return FeeEngine.calculate_task_settlement(Decimal(str(amount)), ctx)
 
     @staticmethod
     def apply_fees_to_payment(payment, *, persist: bool = True) -> dict:
+        from apps.tasks.models import Task
+
+        task = None
+        if payment.object_id:
+            task = Task.objects.filter(pk=payment.object_id).first()
+
         ctx = FeeContext(
             payment_method=payment.payment_method or 'wallet',
             payment_id=str(payment.id),
             task_id=str(payment.object_id) if payment.object_id else None,
             user_id=str(payment.payee_id) if payment.payee_id else None,
+            category_id=str(task.category_id) if task and task.category_id else None,
+            listing_kind=fee_listing_kind_for_task(task),
         )
         breakdown = FeeEngine.calculate_task_settlement(payment.amount, ctx)
         payment.platform_fee = breakdown['platform_fee']
@@ -62,7 +74,7 @@ class PlatformFeeService:
         from apps.fees.models import FeeRule
 
         commission = FeeRule.objects.filter(
-            fee_type=FeeRule.FeeType.COMMISSION,
+            fee_type=FeeRule.FeeType.TASKER_COMMISSION,
             is_active=True,
         ).order_by('-priority').first()
         return {

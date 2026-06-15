@@ -252,7 +252,9 @@ class Task(models.Model):
         if self.status == 'draft':
             self.status = 'open'
             self.published_at = timezone.now()
-            self.save(update_fields=['status', 'published_at'])
+            if not self.allow_bids:
+                self.allow_bids = True
+            self.save(update_fields=['status', 'published_at', 'allow_bids'])
     
     def assign_to_tasker(self, tasker):
         """Assign task to a tasker."""
