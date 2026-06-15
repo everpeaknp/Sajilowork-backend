@@ -13,6 +13,7 @@ from apps.users.employer_profile_service import resolve_employer_image_url
 
 from .listing import (
     LISTING_KIND_CHOICES,
+    LISTING_KIND_JOB,
     LISTING_KIND_TASK,
     LISTING_KIND_CATEGORY_CHOICES,
     get_listing_kind,
@@ -29,6 +30,19 @@ def _cover_attachment(task):
             return None
         return min(prefetched, key=lambda item: item.uploaded_at)
     return task.attachments.order_by('uploaded_at').first()
+
+
+def _resolve_cover_image_url(task, request=None):
+    """Cover image URL from attachments only (no placeholder)."""
+    attachment = _cover_attachment(task)
+    if attachment and attachment.file_url:
+        url = str(attachment.file_url).strip()
+        if not url:
+            return None
+        if request and url.startswith('/'):
+            return request.build_absolute_uri(url)
+        return url
+    return None
 
 
 def _resolve_primary_image_url(task, request=None):
@@ -630,7 +644,17 @@ class TaskStatusSerializer(serializers.Serializer):
             'disputed': ['in_progress', 'cancelled'],
         }
         
-        if value not in valid_transitions.get(current_status, []):
+        allowed = list(valid_transitions.get(current_status, []))
+        is_job_listing = get_listing_kind(task.tags) == LISTING_KIND_JOB
+        if (
+            is_job_listing
+            and value == 'completed'
+            and current_status in ('assigned', 'in_progress', 'funded')
+        ):
+            if value not in allowed:
+                allowed.append(value)
+
+        if value not in allowed:
             raise serializers.ValidationError(
                 f"Cannot transition from {current_status} to {value}."
             )

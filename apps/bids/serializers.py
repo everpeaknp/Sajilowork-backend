@@ -5,7 +5,7 @@ from rest_framework import serializers
 from django.utils import timezone
 from .models import Bid, BidMessage, BidReview, BidNotification
 from apps.users.serializers import UserListSerializer
-from apps.tasks.serializers import TaskListSerializer, TaskOwnerEmployerMixin
+from apps.tasks.serializers import TaskListSerializer, TaskOwnerEmployerMixin, _resolve_cover_image_url
 from apps.tasks.listing import get_listing_kind
 
 
@@ -48,6 +48,8 @@ class BidListSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
     task_owner_logo_color = serializers.SerializerMethodField()
     task_owner_business_name = serializers.SerializerMethodField()
     task_owner_name = serializers.SerializerMethodField()
+    task_image = serializers.SerializerMethodField()
+    task_status = serializers.CharField(source='task.status', read_only=True)
     is_pending = serializers.BooleanField(read_only=True)
     is_accepted = serializers.BooleanField(read_only=True)
     
@@ -56,11 +58,11 @@ class BidListSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
         fields = [
             'id', 'task', 'task_title', 'task_slug', 'task_city', 'task_listing_kind', 'tasker',
             'task_owner_logo_url', 'task_owner_logo_text', 'task_owner_logo_color',
-            'task_owner_business_name', 'task_owner_name',
+            'task_owner_business_name', 'task_owner_name', 'task_image', 'task_status',
             'amount', 'currency',
             'proposal', 'estimated_duration', 'estimated_completion_date',
             'status', 'is_pending', 'is_accepted', 'is_counter_offer',
-            'created_at'
+            'created_at', 'accepted_at'
         ]
         read_only_fields = ['id', 'tasker', 'status', 'created_at']
 
@@ -81,6 +83,9 @@ class BidListSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
 
     def get_task_owner_name(self, obj):
         return self.get_owner_display_name(obj.task)
+
+    def get_task_image(self, obj):
+        return _resolve_cover_image_url(obj.task, self.context.get('request'))
 
 
 class BidDetailSerializer(serializers.ModelSerializer):

@@ -5,7 +5,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from django.db.models import Q, Avg, Sum, Count
+from django.db.models import Q, Avg, Sum, Count, Prefetch
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -32,7 +32,7 @@ from .serializers import (
     BidStatsSerializer,
 )
 from .permissions import IsBidOwner, IsTaskOwner, CanAcceptBid, CanRejectBid
-from apps.tasks.models import Task
+from apps.tasks.models import Task, TaskAttachment
 
 
 class BidViewSet(viewsets.ModelViewSet):
@@ -76,6 +76,11 @@ class BidViewSet(viewsets.ModelViewSet):
             'original_bid',
             'task__owner',
             'task__owner__employer_profile',
+        ).prefetch_related(
+            Prefetch(
+                'task__attachments',
+                queryset=TaskAttachment.objects.order_by('uploaded_at'),
+            ),
         )
 
         if getattr(user, 'is_admin', False):
@@ -94,7 +99,7 @@ class BidViewSet(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
-        if self.action == 'list':
+        if self.action in ('list', 'my_bids', 'received_bids'):
             return BidListSerializer
         elif self.action == 'create':
             return BidCreateSerializer

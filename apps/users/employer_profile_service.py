@@ -124,7 +124,9 @@ def resolve_employer_image_url(request, image_field) -> str | None:
         return None
     if url.startswith('http://') or url.startswith('https://'):
         return url
-    return request.build_absolute_uri(url)
+    if request:
+        return request.build_absolute_uri(url)
+    return url
 
 
 def count_open_employer_listings(user: User, listing_kind: str) -> int:

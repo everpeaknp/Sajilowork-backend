@@ -41,9 +41,11 @@ from .question_utils import block_owner_asking_question
 from .listing import (
     LISTING_KIND_CHOICES,
     LISTING_KIND_CATEGORY_CHOICES,
+    LISTING_KIND_JOB,
     LISTING_KIND_TASK,
     filter_queryset_by_listing_kind,
     filter_queryset_plain_tasks,
+    get_listing_kind,
 )
 from apps.rules.integrations import cancel_task_with_rules
 from apps.rules.permissions import NotSuspended
@@ -386,6 +388,32 @@ class TaskViewSet(BookmarkSerializerContextMixin, viewsets.ModelViewSet):
         new_status = serializer.validated_data['status']
 
         if new_status == 'completed':
+            is_job_listing = get_listing_kind(task.tags) == LISTING_KIND_JOB
+            if (
+                is_job_listing
+                and task.owner_id == request.user.id
+                and task.status in ('assigned', 'in_progress', 'funded')
+            ):
+                now = timezone.now()
+                task.status = 'completed'
+                task.completion_date = now
+                task.completed_at = now
+                if not task.owner_marked_complete_at:
+                    task.owner_marked_complete_at = now
+                task.save(
+                    update_fields=[
+                        'status',
+                        'completion_date',
+                        'completed_at',
+                        'owner_marked_complete_at',
+                        'updated_at',
+                    ]
+                )
+                return Response({
+                    'message': 'Applicant hired successfully.',
+                    'task': TaskDetailSerializer(task, context={'request': request}).data,
+                })
+
             unassigned_open = (
                 task.status == 'open'
                 and not task.assigned_tasker_id
