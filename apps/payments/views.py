@@ -164,6 +164,16 @@ class PaymentViewSet(viewsets.ModelViewSet):
             desc = (tx.description or '').lower()
             return 'wallet recharge' in desc or 'manual wallet recharge' in desc
 
+        def billing_party_snapshot(user):
+            if not user:
+                return {}
+            location = ', '.join(part for part in (user.city, user.country) if part) or 'Nepal'
+            return {
+                'counterparty_name': user.get_full_name() or user.email,
+                'counterparty_email': user.email,
+                'counterparty_location': location,
+            }
+
         if direction == 'earned':
             from .escrow_lifecycle import EscrowLifecycleService
 
@@ -180,7 +190,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 payee=user,
                 payment_type='task_payment',
                 status__in=['released', 'succeeded'],
-            ).select_related('content_type').order_by('-created_at')
+            ).select_related('content_type', 'payer', 'payee').order_by('-created_at')
 
             for payment in payments:
                 title = task_title_for(payment.content_type, payment.object_id)
@@ -208,6 +218,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
                     'direction': 'earned',
                     'created_at': payment.escrow_released_at or payment.completed_at or payment.created_at,
                     'task_id': payment.object_id if payment.content_type and payment.content_type.model == 'task' else None,
+                    **billing_party_snapshot(payment.payer),
                 })
 
             wallet = Wallet.objects.filter(user=user).first()
@@ -256,7 +267,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
             payments = Payment.objects.filter(
                 payer=user,
                 payment_type='task_payment',
-            ).exclude(status='cancelled').select_related('content_type').order_by('-created_at')
+            ).exclude(status='cancelled').select_related('content_type', 'payer', 'payee').order_by('-created_at')
 
             for payment in payments:
                 title = task_title_for(payment.content_type, payment.object_id)
@@ -283,6 +294,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
                     'direction': 'outgoing',
                     'created_at': payment.created_at,
                     'task_id': payment.object_id if payment.content_type and payment.content_type.model == 'task' else None,
+                    **billing_party_snapshot(payment.payee),
                 })
 
             wallet = Wallet.objects.filter(user=user).first()

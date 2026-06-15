@@ -103,7 +103,11 @@ class TaskViewSet(BookmarkSerializerContextMixin, viewsets.ModelViewSet):
 
         queryset = Task.objects.all()
         if user.is_authenticated:
-            queryset = queryset.filter(Q(is_public=True) | Q(owner=user))
+            queryset = queryset.filter(
+                Q(is_public=True)
+                | Q(owner=user)
+                | Q(assigned_tasker=user)
+            )
         else:
             queryset = queryset.filter(is_public=True, status='open')
 

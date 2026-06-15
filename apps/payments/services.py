@@ -275,13 +275,26 @@ class EscrowService:
 
     @staticmethod
     def get_escrow_hold_amount(bid) -> Decimal:
+        return EscrowService.get_escrow_hold_amount_for_amount(
+            bid.amount,
+            category_id=getattr(bid.task, 'category_id', None),
+            task=bid.task,
+        )
+
+    @staticmethod
+    def get_escrow_hold_amount_for_amount(
+        amount,
+        *,
+        category_id=None,
+        task=None,
+    ) -> Decimal:
         from .fee_service import PlatformFeeService
 
         breakdown = PlatformFeeService.calculate_task_payment_fees(
-            bid.amount,
+            amount,
             payment_method='wallet',
-            category_id=getattr(bid.task, 'category_id', None),
-            task=bid.task,
+            category_id=category_id,
+            task=task,
         )
         return breakdown['poster_total_held']
 

@@ -317,6 +317,9 @@ class PaymentHistoryItemSerializer(serializers.Serializer):
     direction = serializers.ChoiceField(choices=['earned', 'outgoing'])
     created_at = serializers.DateTimeField()
     task_id = serializers.UUIDField(required=False, allow_null=True)
+    counterparty_name = serializers.CharField(required=False, allow_blank=True)
+    counterparty_email = serializers.CharField(required=False, allow_blank=True)
+    counterparty_location = serializers.CharField(required=False, allow_blank=True)
 
 
 class PaymentHistoryResponseSerializer(serializers.Serializer):

@@ -49,3 +49,12 @@ class ServiceUpdateSerializer(TaskUpdateSerializer):
             kind = get_listing_kind(self.instance.tags) or 'service'
             attrs['tags'] = with_listing_kind(attrs['tags'], kind)
         return attrs
+
+
+class ServicePurchaseSerializer(serializers.Serializer):
+    package_id = serializers.CharField(max_length=32, default='basic')
+    note = serializers.CharField(required=False, allow_blank=True, max_length=2000)
+
+
+class ServicePurchasePreviewSerializer(serializers.Serializer):
+    package_id = serializers.CharField(max_length=32, default='basic')

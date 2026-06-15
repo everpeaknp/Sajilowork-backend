@@ -1,4 +1,5 @@
 """Dedicated marketplace services API (Task rows with listing:service tag)."""
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
@@ -14,8 +15,11 @@ from .serializers import (
     ServiceCreateSerializer,
     ServiceDetailSerializer,
     ServiceListSerializer,
+    ServicePurchasePreviewSerializer,
+    ServicePurchaseSerializer,
     ServiceUpdateSerializer,
 )
+from .purchase import ServicePurchaseService
 
 
 class ServiceViewSet(BookmarkSerializerContextMixin, viewsets.ModelViewSet):
@@ -73,6 +77,8 @@ class ServiceViewSet(BookmarkSerializerContextMixin, viewsets.ModelViewSet):
         if self.action in ('update', 'partial_update', 'destroy'):
             return [IsAuthenticated(), IsTaskOwner()]
         if self.action == 'mine':
+            return [IsAuthenticated()]
+        if self.action in ('purchase', 'purchase_preview'):
             return [IsAuthenticated()]
         return super().get_permissions()
 
@@ -153,3 +159,80 @@ class ServiceViewSet(BookmarkSerializerContextMixin, viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
         serializer = ServiceListSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], url_path='purchase-preview')
+    def purchase_preview(self, request, slug=None):
+        """Preview wallet hold required to purchase a service package."""
+        service = self.get_object()
+        serializer = ServicePurchasePreviewSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        try:
+            preview = ServicePurchaseService.preview_purchase(
+                service,
+                request.user,
+                serializer.validated_data['package_id'],
+            )
+        except DjangoValidationError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.payments.fee_service import PlatformFeeService
+        from apps.payments.serializers import FeePreviewSerializer
+
+        fee_breakdown = PlatformFeeService.calculate_task_payment_fees(
+            preview['amount'],
+            payment_method='wallet',
+            category_id=getattr(service, 'category_id', None),
+            task=service,
+        )
+        fee_breakdown['currency'] = preview['currency']
+
+        return Response(
+            {
+                **preview,
+                'amount': str(preview['amount']),
+                'hold_amount': str(preview['hold_amount']),
+                'wallet_available': str(preview['wallet_available']),
+                'fee_preview': FeePreviewSerializer(fee_breakdown).data,
+            }
+        )
+
+    @action(detail=True, methods=['post'], url_path='purchase')
+    def purchase(self, request, slug=None):
+        """
+        Purchase a service package.
+
+        Any authenticated user (employer or freelancer) may buy. Funds are held in escrow
+        from the buyer wallet and released to the seller when the order is completed.
+        """
+        service = self.get_object()
+        serializer = ServicePurchaseSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            result = ServicePurchaseService.purchase(
+                service,
+                request.user,
+                serializer.validated_data['package_id'],
+                note=serializer.validated_data.get('note') or '',
+            )
+        except DjangoValidationError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        order_task = result['order_task']
+        bid = result['bid']
+        payment = result.get('payment')
+        conversation = result.get('conversation')
+
+        return Response(
+            {
+                'order_task_id': str(order_task.id),
+                'order_task_slug': order_task.slug,
+                'bid_id': str(bid.id),
+                'payment_id': str(payment.id) if payment else None,
+                'conversation_id': str(conversation.id) if conversation else None,
+                'hold_amount': str(result['hold_amount']),
+                'package': result['package'],
+                'parent_service_slug': result['parent_service_slug'],
+                'message': 'Service purchased successfully. Payment is held in escrow until completion.',
+            },
+            status=status.HTTP_201_CREATED,
+        )
