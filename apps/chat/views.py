@@ -56,13 +56,15 @@ class ConversationViewSet(viewsets.ModelViewSet):
         queryset = queryset.filter(is_archived=is_archived)
 
         view = (self.request.query_params.get('view') or '').strip().lower()
+        direct_threads = Q(task__isnull=True, bid__isnull=True)
         if view in ('employer', 'customer', 'received'):
             queryset = queryset.filter(
-                Q(task__owner=user) | Q(bid__task__owner=user),
+                Q(task__owner=user) | Q(bid__task__owner=user) | direct_threads,
             )
         elif view in ('tasker', 'freelancer', 'asked'):
-            queryset = queryset.exclude(
-                Q(task__owner=user) | Q(bid__task__owner=user),
+            queryset = queryset.filter(
+                direct_threads
+                | (~Q(task__owner=user) & ~Q(bid__task__owner=user))
             )
         
         # Filter by task or bid

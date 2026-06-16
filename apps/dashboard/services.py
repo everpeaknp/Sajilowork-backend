@@ -22,7 +22,10 @@ from apps.tasks.listing import (
     LISTING_KIND_JOB,
     LISTING_KIND_PROJECT,
     LISTING_KIND_SERVICE,
+    LISTING_KIND_TASK,
+    LISTING_KIND_CHOICES,
     filter_queryset_by_listing_kind,
+    get_listing_kind,
 )
 from apps.bids.models import Bid
 from apps.reviews.models import Review
@@ -260,6 +263,78 @@ class DashboardService:
             return ''
 
     @staticmethod
+    def _owner_business_profile_for_listing(task: Task) -> dict:
+        owner = getattr(task, 'owner', None)
+        profile = getattr(owner, 'employer_profile', None) if owner is not None else None
+
+        logo_url = ''
+        if profile and profile.logo_image:
+            try:
+                logo_url = str(profile.logo_image.url).strip()
+            except (ValueError, AttributeError):
+                logo_url = ''
+        if not logo_url and owner:
+            logo_url = DashboardService._user_avatar_url(owner)
+
+        company_name = ''
+        if profile and profile.company_name.strip():
+            company_name = profile.company_name.strip()
+        elif owner:
+            company_name = (owner.get_full_name() or '').strip()
+            if not company_name and getattr(owner, 'email', None):
+                company_name = owner.email.split('@')[0]
+
+        logo_color = profile.logo_color if profile and profile.logo_color else 'serif-m'
+        if profile and profile.logo_text.strip():
+            logo_text = profile.logo_text.strip()
+        elif company_name:
+            parts = company_name.split()
+            logo_text = (
+                ''.join(part[0] for part in parts[:2]).upper()
+                if len(parts) >= 2
+                else (company_name[:2] or 'CO').upper()
+            )
+        else:
+            logo_text = 'CO'
+
+        return {
+            'business_logo_url': logo_url,
+            'business_name': company_name,
+            'logo_color': logo_color,
+            'logo_text': logo_text,
+        }
+
+    @staticmethod
+    def _resolve_listing_kind_label(task: Task) -> str:
+        kind = get_listing_kind(task.tags)
+        if kind in LISTING_KIND_CHOICES:
+            return kind
+        return LISTING_KIND_TASK
+
+    @staticmethod
+    def _build_my_listings(tasks_qs, limit: int = 5) -> list:
+        listings_qs = (
+            tasks_qs.select_related('owner', 'owner__employer_profile')
+            .prefetch_related('attachments')
+            .order_by('-updated_at', '-created_at')[:limit]
+        )
+        return [
+            {
+                'id': str(task.id),
+                'slug': task.slug,
+                'title': task.title,
+                'listing_kind': DashboardService._resolve_listing_kind_label(task),
+                'status': task.status,
+                'budget_amount': float(task.budget_amount or 0),
+                'currency': task.budget_currency or DEFAULT_CURRENCY,
+                'date': (task.updated_at or task.created_at).isoformat(),
+                'image': DashboardService._listing_image(task),
+                **DashboardService._owner_business_profile_for_listing(task),
+            }
+            for task in listings_qs
+        ]
+
+    @staticmethod
     def get_user_overview(user):
         """Role-aware dashboard overview widgets for /dashboard home."""
         stats = DashboardService.get_user_statistics(user)
@@ -315,11 +390,12 @@ class DashboardService:
             ]
 
             most_viewed_qs = (
-                services_qs.select_related('owner')
+                services_qs.select_related('owner', 'owner__employer_profile')
                 .prefetch_related('attachments')
                 .order_by('-views_count', '-created_at')[:3]
             )
             recent_purchases = []
+            my_listings = []
             completed_projects_qs = (
                 filter_queryset_by_listing_kind(
                     Task.objects.filter(assigned_tasker=user, status='completed'),
@@ -384,28 +460,13 @@ class DashboardService:
             ]
 
             most_viewed_qs = (
-                filter_queryset_by_listing_kind(tasks_qs, LISTING_KIND_SERVICE)
-                .select_related('owner')
+                filter_queryset_by_listing_kind(tasks_qs, LISTING_KIND_JOB)
+                .select_related('owner', 'owner__employer_profile')
                 .prefetch_related('attachments')
                 .order_by('-views_count', '-created_at')[:3]
             )
-            recent_purchases_qs = (
-                Payment.objects.filter(payer=user, status__in=['succeeded', 'released'])
-                .select_related('payer', 'payee')
-                .order_by('-created_at')[:3]
-            )
-            recent_purchases = [
-                {
-                    'buyer_name': payment.payer.get_full_name() or payment.payer.email,
-                    'task_title': DashboardService._payment_task_title(payment),
-                    'amount': float(payment.amount),
-                    'currency': payment.currency or DEFAULT_CURRENCY,
-                    'date': (payment.completed_at or payment.created_at).isoformat(),
-                    'avatar_initial': (payment.payer.first_name or payment.payer.email or '?')[:2].upper(),
-                    'avatar_url': DashboardService._user_avatar_url(payment.payer),
-                }
-                for payment in recent_purchases_qs
-            ]
+            recent_purchases = []
+            my_listings = DashboardService._build_my_listings(tasks_qs)
             recent_completed_projects = []
             activity_qs = Payment.objects.filter(payer=user).select_related('payee')
 
@@ -422,6 +483,7 @@ class DashboardService:
                 'starting_price': float(task.budget_amount or 0),
                 'currency': task.budget_currency or DEFAULT_CURRENCY,
                 'image': DashboardService._listing_image(task),
+                **DashboardService._owner_business_profile_for_listing(task),
             }
             for task in most_viewed_qs
         ]
@@ -438,6 +500,7 @@ class DashboardService:
                 'traffic': traffic,
                 'most_viewed_services': most_viewed_services,
                 'recent_purchases': recent_purchases,
+                'my_listings': my_listings,
                 'recent_completed_projects': recent_completed_projects,
                 'recent_activity': recent_activity,
             },

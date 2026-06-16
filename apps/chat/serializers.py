@@ -210,10 +210,15 @@ class ConversationCreateSerializer(serializers.ModelSerializer):
         """Validate conversation creation."""
         task = data.get('task')
         bid = data.get('bid')
-        
+        participant_ids = self.initial_data.get('participant_ids') or []
+
         if not task and not bid:
-            raise serializers.ValidationError("Conversation must be related to a task or bid.")
-        
+            if not participant_ids:
+                raise serializers.ValidationError(
+                    'Direct conversations require at least one other participant.'
+                )
+            return data
+
         if task and bid:
             raise serializers.ValidationError("Conversation cannot be related to both task and bid.")
 
@@ -229,7 +234,7 @@ class ConversationCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 error_message or 'Messaging is not available for this task.'
             )
-        
+
         return data
     
     def create(self, validated_data):

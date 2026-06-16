@@ -20,6 +20,28 @@ def _resolve_task_id(*, task=None, bid=None):
     return None
 
 
+def find_existing_direct_conversation(
+    participant_user_ids,
+    active_only: bool = True,
+):
+    """Locate a direct thread (no task/bid) for the same participants."""
+    participant_user_ids = {uid for uid in participant_user_ids if uid}
+    if len(participant_user_ids) < 2:
+        return None
+
+    qs = Conversation.objects.filter(task__isnull=True, bid__isnull=True).prefetch_related(
+        'participants'
+    )
+    if active_only:
+        qs = qs.filter(is_active=True)
+
+    for conversation in qs:
+        if participant_user_ids == _participant_ids(conversation):
+            return conversation
+
+    return None
+
+
 def find_existing_conversation(
     *,
     task=None,
@@ -72,6 +94,18 @@ def get_or_create_conversation(
     """
     users = list(participant_users)
     participant_user_ids = [u.id for u in users]
+
+    if task is None and bid is None:
+        existing = find_existing_direct_conversation(
+            participant_user_ids,
+            active_only=active_only,
+        )
+        if existing:
+            return existing, False
+
+        conversation = Conversation.objects.create(task=None, bid=None)
+        conversation.participants.add(*users)
+        return conversation, True
 
     existing = find_existing_conversation(
         task=task,

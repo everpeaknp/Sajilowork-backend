@@ -20,7 +20,13 @@ ALLOWED_EMPLOYER_IMAGE_CONTENT_TYPES = {
 
 def build_default_employer_profile(user: User) -> EmployerProfile:
     company_name = user.get_full_name() or (user.username or '').strip()
-    initials = ''.join(part[0] for part in company_name.split()[:2]).upper() or 'CO'
+    parts = [part for part in company_name.split() if part]
+    if len(parts) >= 2:
+        initials = f'{parts[0][0]}{parts[1][0]}'.upper()
+    elif len(parts) == 1 and len(parts[0]) >= 2:
+        initials = parts[0][:2].upper()
+    else:
+        initials = (parts[0][0] if parts else 'E').upper()
     return EmployerProfile(
         user=user,
         account_type='individual',

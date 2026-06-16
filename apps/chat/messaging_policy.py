@@ -27,10 +27,7 @@ def get_conversation_task(conversation):
 
 def task_allows_messaging(task) -> tuple[bool, str | None]:
     if task is None:
-        return (
-            False,
-            'Messaging is only available while a task is assigned and in progress.',
-        )
+        return True, None
 
     if task.status in MESSAGING_ALLOWED_TASK_STATUSES:
         return True, None
@@ -41,4 +38,6 @@ def task_allows_messaging(task) -> tuple[bool, str | None]:
 
 
 def conversation_allows_messaging(conversation) -> tuple[bool, str | None]:
+    if not getattr(conversation, 'task_id', None) and not getattr(conversation, 'bid_id', None):
+        return True, None
     return task_allows_messaging(get_conversation_task(conversation))
