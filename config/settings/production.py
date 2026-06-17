@@ -3,7 +3,7 @@ Production settings.
 """
 from .base import *
 
-DEBUG = False
+DEBUG = True
 
 # Security
 SECURE_SSL_REDIRECT = True
