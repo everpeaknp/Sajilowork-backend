@@ -21,6 +21,16 @@ def custom_exception_handler(exc, context):
             }
         }
         response.data = custom_response_data
+    else:
+        # Unhandled exception (500)
+        import traceback
+        return Response({
+            'success': False,
+            'error': {
+                'message': 'Internal Server Error',
+                'details': {'detail': traceback.format_exc()}
+            }
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     return response
 
