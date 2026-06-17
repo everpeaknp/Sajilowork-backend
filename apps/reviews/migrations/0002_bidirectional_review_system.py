@@ -28,6 +28,7 @@ def populate_invitation_reviewer_type(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    atomic = False
 
     dependencies = [
         ('reviews', '0001_initial'),

@@ -33,6 +33,7 @@ def migrate_escrow_statuses(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    atomic = False
 
     dependencies = [
         ('payments', '0006_remove_stripe_paypal'),

@@ -38,6 +38,7 @@ def unseed_languages(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    atomic = False
 
     initial = True
 

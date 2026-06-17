@@ -86,6 +86,7 @@ def unseed_listing_kind_fee_rules(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    atomic = False
 
     dependencies = [
         ('fees', '0004_fix_default_service_fee'),

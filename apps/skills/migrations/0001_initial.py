@@ -70,6 +70,7 @@ def unseed_skills(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    atomic = False
 
     initial = True
 
