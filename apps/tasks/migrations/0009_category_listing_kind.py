@@ -38,6 +38,7 @@ def unseed_job_categories(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    atomic = False
 
     dependencies = [
         ('tasks', '0008_task_cancellation_tracking'),
