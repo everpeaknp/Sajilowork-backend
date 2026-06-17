@@ -1,0 +1,44 @@
+databases:
+  - name: sajilowork-db
+    databaseName: sajilowork
+    user: sajilowork_user
+
+  - type: redis
+    name: sajilowork-redis
+    plan: free
+    ipAllowList: [] # internal connections only by default
+
+services:
+  - type: web
+    name: sajilowork-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    region: oregon
+    plan: free
+    healthCheckPath: /api/schema/redoc/ # Or any other public health endpoint
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sajilowork-db
+          property: connectionString
+      - key: REDIS_URL
+        fromDatabase:
+          name: sajilowork-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromDatabase:
+          name: sajilowork-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromDatabase:
+          name: sajilowork-redis
+          property: connectionString
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "*"
+      # Add other required environment variables here (e.g. redis url for channels, email config, etc.)
