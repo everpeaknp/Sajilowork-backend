@@ -25,5 +25,5 @@ COPY . /app/
 # Expose port
 EXPOSE 8000
 
-# Start daphne server for ASGI/WebSockets
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]
+# Start the application via entrypoint script
+CMD ["/app/scripts/entrypoint.sh"]
