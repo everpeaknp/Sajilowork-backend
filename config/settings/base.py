@@ -19,11 +19,7 @@ except ImportError:
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Always load env from backend/.env (not process cwd)
-_env_file = BASE_DIR / '.env'
-if _env_file.is_file():
-    config = Config(RepositoryEnv(str(_env_file)))
-else:
-    config = Config(os.environ)
+from decouple import config, Csv
 
 # Security Settings
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
