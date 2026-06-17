@@ -71,7 +71,7 @@ class Message(models.Model):
     
     # Attachments
     attachment = models.FileField(
-        upload_to='chat/attachments/%Y/%m/%d/',
+        upload_to='sajilowork/chat/attachments/%Y/%m/%d/',
         null=True,
         blank=True,
         validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt'])]

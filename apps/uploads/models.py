@@ -52,7 +52,7 @@ class Upload(models.Model):
     content_object = GenericForeignKey('content_type', 'object_id')
     
     # File information
-    file = models.FileField(upload_to='uploads/%Y/%m/%d/')
+    file = models.FileField(upload_to='sajilowork/uploads/%Y/%m/%d/')
     file_name = models.CharField(max_length=255)
     file_type = models.CharField(max_length=20, choices=FILE_TYPE_CHOICES)
     file_size = models.BigIntegerField(help_text="File size in bytes")
@@ -117,19 +117,19 @@ class ImageUpload(models.Model):
     
     # Thumbnails (generated if Pillow is available)
     thumbnail_small = models.ImageField(
-        upload_to='thumbnails/small/%Y/%m/%d/',
+        upload_to='sajilowork/thumbnails/small/%Y/%m/%d/',
         null=True,
         blank=True,
         help_text="150x150 thumbnail"
     )
     thumbnail_medium = models.ImageField(
-        upload_to='thumbnails/medium/%Y/%m/%d/',
+        upload_to='sajilowork/thumbnails/medium/%Y/%m/%d/',
         null=True,
         blank=True,
         help_text="300x300 thumbnail"
     )
     thumbnail_large = models.ImageField(
-        upload_to='thumbnails/large/%Y/%m/%d/',
+        upload_to='sajilowork/thumbnails/large/%Y/%m/%d/',
         null=True,
         blank=True,
         help_text="600x600 thumbnail"

@@ -17,7 +17,7 @@ class BlogPost(models.Model):
         blank=True,
         help_text='Full article body (HTML). Shown on the public blog post page.',
     )
-    image = models.ImageField(upload_to='blog/', blank=True, null=True)
+    image = models.ImageField(upload_to='sajilowork/blog/', blank=True, null=True)
     image_url = models.URLField(
         max_length=500,
         blank=True,

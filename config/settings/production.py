@@ -56,3 +56,6 @@ if not config('REDIS_URL', default=''):
         }
     }
 
+# Use Cloudinary for media files if configured
+if config('CLOUDINARY_CLOUD_NAME', default=''):
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'

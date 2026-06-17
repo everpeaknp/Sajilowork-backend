@@ -99,13 +99,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     # Profile media
     profile_image = models.ImageField(
-        upload_to='profile_images/',
+        upload_to='sajilowork/profile_images/',
         blank=True,
         null=True,
         help_text="Profile image"
     )
     cover_image = models.ImageField(
-        upload_to='cover_images/',
+        upload_to='sajilowork/cover_images/',
         blank=True,
         null=True,
         help_text="Cover image"
@@ -329,7 +329,7 @@ class UserBadge(models.Model):
     description = models.TextField(blank=True)
     icon_url = models.URLField(blank=True, null=True)
     verification_document = models.FileField(
-        upload_to='badge_verification/%Y/%m/',
+        upload_to='sajilowork/badge_verification/%Y/%m/',
         blank=True,
         null=True,
         help_text='Uploaded certificate or police check document.',
@@ -563,7 +563,7 @@ class EmployerProfile(models.Model):
     logo_color = models.CharField(max_length=40, default='serif-m')
     logo_text = models.CharField(max_length=8, default='CO')
     logo_image = models.ImageField(
-        upload_to='employer_logos/',
+        upload_to='sajilowork/employer_logos/',
         blank=True,
         null=True,
     )
@@ -591,7 +591,7 @@ class EmployerGalleryImage(models.Model):
         on_delete=models.CASCADE,
         related_name='gallery_images',
     )
-    image = models.ImageField(upload_to='employer_gallery/')
+    image = models.ImageField(upload_to='sajilowork/employer_gallery/')
     alt_text = models.CharField(max_length=255, blank=True)
     sort_order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
