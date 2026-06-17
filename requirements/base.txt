@@ -32,8 +32,6 @@ django-celery-results==2.5.1
 Pillow==10.2.0
 django-storages==1.14.2
 boto3==1.34.34
-cloudinary==1.40.0
-django-cloudinary-storage==0.3.0
 
 # Geolocation
 geopy==2.4.1
