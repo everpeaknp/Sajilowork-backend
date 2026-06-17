@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    image: ghcr.io/everpeaknp/sajilowork-backend:latest
+    container_name: sajilowork_web
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "8002:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - media_volume:/app/media
+      - static_volume:/app/static
+
+  db:
+    image: postgres:16-alpine
+    container_name: sajilowork_db
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sajilowork_redis
+    restart: always
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_volume:
+  static_volume:
