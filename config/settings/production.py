@@ -3,7 +3,7 @@ Production settings.
 """
 from .base import *
 
-DEBUG = True
+DEBUG = False
 
 # Security
 SECURE_SSL_REDIRECT = True
@@ -47,5 +47,12 @@ if config('DATABASE_URL', default=None):
             conn_max_age=600,
             conn_health_checks=True,
         )
+    }
+
+if not config('REDIS_URL', default=''):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
     }
 
