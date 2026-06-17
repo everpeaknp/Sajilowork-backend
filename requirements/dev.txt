@@ -24,7 +24,7 @@ coverage==7.4.1
 httpie==3.2.2
 
 # Development Tools
-django-debug-toolbar==4.3.0
+
 ipython==8.21.0
 ipdb==0.13.13
 
