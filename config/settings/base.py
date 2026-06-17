@@ -23,7 +23,7 @@ _env_file = BASE_DIR / '.env'
 if _env_file.is_file():
     config = Config(RepositoryEnv(str(_env_file)))
 else:
-    config = Config()
+    config = Config(os.environ)
 
 # Security Settings
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
