@@ -167,11 +167,9 @@ class UserBadgeSerializer(serializers.ModelSerializer):
     def get_verification_document(self, obj):
         if not obj.verification_document:
             return None
-        request = self.context.get('request')
-        url = obj.verification_document.url
-        if request and url.startswith('/'):
-            return request.build_absolute_uri(url)
-        return url
+        from .document_service import resolve_document_url
+
+        return resolve_document_url(self.context.get('request'), obj.verification_document)
 
 
 class PublicUserBadgeSerializer(serializers.ModelSerializer):

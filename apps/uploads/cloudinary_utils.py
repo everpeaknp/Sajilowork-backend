@@ -71,7 +71,7 @@ def is_cloudinary_url(url: str) -> bool:
     return 'res.cloudinary.com' in (url or '')
 
 
-def upload_file_to_cloudinary(uploaded_file, *, folder: str) -> dict:
+def upload_file_to_cloudinary(uploaded_file, *, folder: str, resource_type: str = 'image') -> dict:
     """Upload via Cloudinary API (requires API key with create/upload permission)."""
     configure_cloudinary()
     import cloudinary.uploader
@@ -82,5 +82,27 @@ def upload_file_to_cloudinary(uploaded_file, *, folder: str) -> dict:
     return cloudinary.uploader.upload(
         uploaded_file,
         folder=folder,
-        resource_type='image',
+        resource_type=resource_type,
     )
+
+
+def infer_cloudinary_resource_type(uploaded_file) -> str:
+    content_type = (getattr(uploaded_file, 'content_type', '') or '').lower()
+    if content_type.startswith('image/'):
+        return 'image'
+    return 'auto'
+
+
+def upload_image_to_cloudinary_or_raise(uploaded_file, *, folder: str) -> str:
+    """Upload an image to Cloudinary and return the secure URL."""
+    if not cloudinary_server_upload_enabled():
+        raise ValueError(
+            'Cloudinary server upload is unavailable. Configure CLOUDINARY_API_SECRET '
+            'or use CLOUDINARY_UPLOAD_PRESET for browser uploads.'
+        )
+
+    result = upload_file_to_cloudinary(uploaded_file, folder=folder)
+    url = result.get('secure_url') or result.get('url')
+    if not url:
+        raise ValueError('Cloudinary upload succeeded but no URL was returned')
+    return url

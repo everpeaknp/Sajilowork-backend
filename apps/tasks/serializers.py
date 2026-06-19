@@ -10,6 +10,7 @@ from .models import (
     TaskView, TaskQuestion, TaskReport
 )
 from apps.users.employer_profile_service import resolve_employer_image_url
+from apps.users.user_media_utils import resolve_user_media_url
 
 from .listing import (
     LISTING_KIND_CHOICES,
@@ -101,15 +102,7 @@ class TaskAttachmentSerializer(serializers.ModelSerializer):
 
 
 def _resolve_user_profile_image_url(user, request=None):
-    if not user or not getattr(user, 'profile_image', None):
-        return None
-    try:
-        url = user.profile_image.url
-    except (ValueError, AttributeError):
-        return None
-    if request:
-        return request.build_absolute_uri(url)
-    return url
+    return resolve_user_media_url(request, getattr(user, 'profile_image', None) if user else None)
 
 
 class TaskQuestionSerializer(serializers.ModelSerializer):
@@ -184,16 +177,7 @@ class DashboardTaskQuestionSerializer(serializers.ModelSerializer):
 
     def get_asked_by_image(self, obj):
         asked_by = getattr(obj, 'asked_by', None)
-        if not asked_by or not getattr(asked_by, 'profile_image', None):
-            return None
-        try:
-            url = asked_by.profile_image.url
-        except (ValueError, AttributeError):
-            return None
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(url)
-        return url
+        return _resolve_user_profile_image_url(asked_by, self.context.get('request'))
 
     def get_task_listing_kind(self, obj):
         kind = get_listing_kind(getattr(obj.task, 'tags', None))
@@ -331,16 +315,7 @@ class TaskListSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
         not call .url on ImageFieldFile, which is why this used to break.
         """
         owner = getattr(obj, 'owner', None)
-        if not owner or not getattr(owner, 'profile_image', None):
-            return None
-        try:
-            url = owner.profile_image.url
-        except (ValueError, AttributeError):
-            return None
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(url)
-        return url
+        return _resolve_user_profile_image_url(owner, self.context.get('request'))
 
     def get_owner_is_verified(self, obj):
         owner = getattr(obj, 'owner', None)
@@ -418,16 +393,7 @@ class TaskDetailSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
 
     def get_owner_image(self, obj):
         owner = getattr(obj, 'owner', None)
-        if not owner or not getattr(owner, 'profile_image', None):
-            return None
-        try:
-            url = owner.profile_image.url
-        except (ValueError, AttributeError):
-            return None
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(url)
-        return url
+        return _resolve_user_profile_image_url(owner, self.context.get('request'))
 
     def get_owner_is_verified(self, obj):
         owner = getattr(obj, 'owner', None)

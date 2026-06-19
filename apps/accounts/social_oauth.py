@@ -13,6 +13,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import signing
 from django.utils import timezone
+
+from apps.users.user_media_utils import resolve_user_media_url
 from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
@@ -61,12 +63,7 @@ def _unique_username(base: str) -> str:
 
 
 def serialize_user_for_auth(user) -> dict[str, Any]:
-    profile_image = None
-    if user.profile_image:
-        try:
-            profile_image = user.profile_image.url
-        except Exception:
-            profile_image = None
+    profile_image = resolve_user_media_url(None, getattr(user, 'profile_image', None))
     return {
         'id': str(user.id),
         'email': user.email,

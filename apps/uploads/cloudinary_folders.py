@@ -78,3 +78,23 @@ def cloudinary_uploads_folder() -> str:
 
 def cloudinary_chat_folder() -> str:
     return cloudinary_folder('Chat')
+
+
+def cloudinary_employers_logo_folder(user_id) -> str:
+    return cloudinary_folder('Employers', str(user_id), 'Logos')
+
+
+def cloudinary_employers_gallery_folder(user_id) -> str:
+    return cloudinary_folder('Employers', str(user_id), 'Gallery')
+
+
+def cloudinary_users_portfolio_folder(user_id) -> str:
+    return cloudinary_folder('Users', str(user_id), 'Portfolio')
+
+
+def cloudinary_users_documents_folder(user_id) -> str:
+    return cloudinary_folder('Users', str(user_id), 'Documents')
+
+
+def cloudinary_users_badges_folder(user_id) -> str:
+    return cloudinary_folder('Users', str(user_id), 'Badges')

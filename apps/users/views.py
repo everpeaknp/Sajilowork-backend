@@ -39,6 +39,7 @@ from .portfolio_service import (
     delete_portfolio_user_document,
     get_public_portfolio_items,
     portfolio_document_status_map,
+    resolve_portfolio_stored_url,
     save_portfolio_upload,
     sync_portfolio_user_document,
 )
@@ -667,34 +668,49 @@ class PortfolioView(generics.ListCreateAPIView):
         return context
 
     def create(self, request, *args, **kwargs):
+        from apps.uploads.cloudinary_utils import is_cloudinary_url
+
         if PortfolioItem.objects.filter(user=request.user).count() >= MAX_PORTFOLIO_ITEMS:
             return Response(
                 {'error': f'Maximum {MAX_PORTFOLIO_ITEMS} portfolio items allowed.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        file_url = (request.data.get('file_url') or request.data.get('cloudinary_url') or '').strip()
         file = request.FILES.get('file')
-        if not file:
+
+        if not file and not file_url:
             return Response({'error': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if file.size > MAX_PORTFOLIO_BYTES:
+        if file_url and not is_cloudinary_url(file_url):
             return Response(
-                {'error': 'File size exceeds 5MB limit.'},
+                {'error': 'Invalid file URL. Only Cloudinary URLs are accepted.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        content_type = file.content_type or ''
-        if content_type not in ALLOWED_PORTFOLIO_CONTENT_TYPES:
-            return Response(
-                {'error': 'Invalid file type. Only JPG, PNG, PDF, and TXT files are allowed.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        if file:
+            if file.size > MAX_PORTFOLIO_BYTES:
+                return Response(
+                    {'error': 'File size exceeds 5MB limit.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        title = (request.data.get('title') or file.name).strip()[:255]
+            content_type = file.content_type or ''
+            if content_type not in ALLOWED_PORTFOLIO_CONTENT_TYPES:
+                return Response(
+                    {'error': 'Invalid file type. Only JPG, PNG, PDF, and TXT files are allowed.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            storage_path = save_portfolio_upload(request.user, file)
+            file_url = resolve_portfolio_stored_url(request, storage_path)
+            file_size = file.size
+            content_type = content_type or 'application/octet-stream'
+        else:
+            file_size = int(request.data.get('file_size') or 0)
+            content_type = (request.data.get('file_type') or 'image/jpeg').strip()
+
+        title = (request.data.get('title') or (file.name if file else 'Portfolio item')).strip()[:255]
         description = (request.data.get('description') or '').strip()
-
-        storage_path = save_portfolio_upload(request.user, file)
-        file_url = build_portfolio_file_url(request, storage_path)
 
         portfolio_item = PortfolioItem.objects.create(
             user=request.user,
@@ -702,7 +718,7 @@ class PortfolioView(generics.ListCreateAPIView):
             description=description,
             file=file_url,
             file_type=content_type,
-            file_size=file.size,
+            file_size=file_size,
         )
 
         sync_portfolio_user_document(
@@ -775,28 +791,21 @@ class UserBadgeViewSet(viewsets.GenericViewSet):
             request.FILES.get('verification_document')
             or request.FILES.get('file')
         )
+        document_url = (
+            request.data.get('document_url')
+            or request.data.get('file_url')
+            or request.data.get('cloudinary_url')
+            or ''
+        ).strip()
         badge = request_or_sync_badge(
             request.user,
             badge_type,
             uploaded_file=uploaded_file,
+            document_url=document_url,
             document_number=document_number,
             custom_name=create_serializer.validated_data.get('name', ''),
             custom_description=create_serializer.validated_data.get('description', ''),
         )
-        if badge.verification_document and badge.badge_type in (
-            'police_check',
-            'electrical_licence',
-            'plumbing_licence',
-            'custom_licence',
-        ):
-            from .badge_service import _sync_user_document_for_badge
-
-            document_url = request.build_absolute_uri(badge.verification_document.url)
-            _sync_user_document_for_badge(
-                request.user,
-                badge,
-                document_url=document_url,
-            )
         output = self.get_serializer(badge)
         return Response(output.data, status=status.HTTP_201_CREATED)
 
@@ -817,30 +826,46 @@ class UserDocumentViewSet(viewsets.ModelViewSet):
         Fields:
           - document_type: one of UserDocument.DOCUMENT_TYPES
           - document_number: optional reference
-          - file: required (jpg/png/pdf)
+          - file: required (jpg/png/pdf) unless document_url is provided
+          - document_url / file_url: Cloudinary URL from browser upload
         """
+        from apps.uploads.cloudinary_utils import is_cloudinary_url
+
         document_type = (request.data.get('document_type') or '').strip()
         document_number = (request.data.get('document_number') or '').strip()
+        document_url = (
+            request.data.get('document_url')
+            or request.data.get('file_url')
+            or request.data.get('cloudinary_url')
+            or ''
+        ).strip()
         uploaded_file = request.FILES.get('file') or request.FILES.get('document')
 
         if not document_type:
             return Response({'error': 'document_type is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not uploaded_file:
+        if not uploaded_file and not document_url:
             return Response({'error': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if uploaded_file.size > MAX_DOCUMENT_BYTES:
-            return Response({'error': 'File size exceeds 5MB limit.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        content_type = uploaded_file.content_type or ''
-        if content_type not in ALLOWED_DOCUMENT_CONTENT_TYPES:
+        if document_url and not is_cloudinary_url(document_url):
             return Response(
-                {'error': 'Invalid file type. Only JPG, PNG, and PDF files are allowed.'},
+                {'error': 'Invalid document URL. Only Cloudinary URLs are accepted.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        storage_path = save_user_document_upload(request.user, uploaded_file)
-        document_url = build_document_url(request, storage_path)
+        if uploaded_file:
+            if uploaded_file.size > MAX_DOCUMENT_BYTES:
+                return Response({'error': 'File size exceeds 5MB limit.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            content_type = uploaded_file.content_type or ''
+            if content_type not in ALLOWED_DOCUMENT_CONTENT_TYPES:
+                return Response(
+                    {'error': 'Invalid file type. Only JPG, PNG, and PDF files are allowed.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            storage_path = save_user_document_upload(request.user, uploaded_file)
+            document_url = build_document_url(request, storage_path)
 
         doc = upsert_user_document(
             user=request.user,

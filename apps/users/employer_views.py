@@ -21,7 +21,11 @@ from .employer_profile_service import (
     MAX_EMPLOYER_LOGO_BYTES,
     get_employer_user_by_slug,
     get_or_create_employer_profile,
+    save_employer_gallery_upload,
+    save_employer_logo_upload,
 )
+from apps.uploads.cloudinary_utils import is_cloudinary_url
+from apps.users.user_media_utils import clear_stored_user_media
 from .employer_serializers import (
     EmployerGalleryImageSerializer,
     EmployerMyProfileSerializer,
@@ -87,21 +91,38 @@ class EmployerLogoUploadView(APIView):
             return Response({'error': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
 
         uploaded = request.FILES.get('file') or request.FILES.get('logo')
-        if not uploaded:
+        image_url = (request.data.get('image_url') or request.data.get('cloudinary_url') or '').strip()
+
+        if not uploaded and not image_url:
             return Response({'error': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
-        if uploaded.size > MAX_EMPLOYER_LOGO_BYTES:
-            return Response({'error': 'Logo must be 1MB or smaller.'}, status=status.HTTP_400_BAD_REQUEST)
-        content_type = (uploaded.content_type or '').lower()
-        if content_type and content_type not in ALLOWED_EMPLOYER_IMAGE_CONTENT_TYPES:
+
+        if image_url and not is_cloudinary_url(image_url):
             return Response(
-                {'error': 'Logo must be JPG, PNG, or WEBP.'},
+                {'error': 'Invalid image URL. Only Cloudinary URLs are accepted.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if uploaded:
+            if uploaded.size > MAX_EMPLOYER_LOGO_BYTES:
+                return Response({'error': 'Logo must be 1MB or smaller.'}, status=status.HTTP_400_BAD_REQUEST)
+            content_type = (uploaded.content_type or '').lower()
+            if content_type and content_type not in ALLOWED_EMPLOYER_IMAGE_CONTENT_TYPES:
+                return Response(
+                    {'error': 'Logo must be JPG, PNG, or WEBP.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         profile = get_or_create_employer_profile(request.user)
-        if profile.logo_image:
-            profile.logo_image.delete(save=False)
-        profile.logo_image = uploaded
+        clear_stored_user_media(profile.logo_image)
+
+        try:
+            if image_url:
+                profile.logo_image = image_url
+            else:
+                profile.logo_image = save_employer_logo_upload(request.user, uploaded)
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
         profile.save(update_fields=['logo_image', 'updated_at'])
 
         output = EmployerMyProfileSerializer(profile, context={'request': request})
@@ -131,25 +152,41 @@ class EmployerGalleryListCreateView(APIView):
             )
 
         uploaded = request.FILES.get('file') or request.FILES.get('image')
-        if not uploaded:
+        image_url = (request.data.get('image_url') or request.data.get('cloudinary_url') or '').strip()
+
+        if not uploaded and not image_url:
             return Response({'error': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
-        if uploaded.size > MAX_EMPLOYER_GALLERY_BYTES:
+
+        if image_url and not is_cloudinary_url(image_url):
             return Response(
-                {'error': 'Each gallery image must be 1MB or smaller.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        content_type = (uploaded.content_type or '').lower()
-        if content_type and content_type not in ALLOWED_EMPLOYER_IMAGE_CONTENT_TYPES:
-            return Response(
-                {'error': 'Gallery images must be JPG, PNG, or WEBP.'},
+                {'error': 'Invalid image URL. Only Cloudinary URLs are accepted.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if uploaded:
+            if uploaded.size > MAX_EMPLOYER_GALLERY_BYTES:
+                return Response(
+                    {'error': 'Each gallery image must be 1MB or smaller.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            content_type = (uploaded.content_type or '').lower()
+            if content_type and content_type not in ALLOWED_EMPLOYER_IMAGE_CONTENT_TYPES:
+                return Response(
+                    {'error': 'Gallery images must be JPG, PNG, or WEBP.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         alt_text = (request.data.get('alt_text') or request.data.get('alt') or '').strip()[:255]
         sort_order = profile.gallery_images.count()
+
+        try:
+            stored_url = image_url or save_employer_gallery_upload(request.user, uploaded)
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
         image = EmployerGalleryImage.objects.create(
             profile=profile,
-            image=uploaded,
+            image=stored_url,
             alt_text=alt_text,
             sort_order=sort_order,
         )
@@ -165,7 +202,7 @@ class EmployerGalleryDetailView(APIView):
     def delete(self, request, id):
         profile = get_or_create_employer_profile(request.user)
         image = get_object_or_404(EmployerGalleryImage, pk=id, profile=profile)
-        image.image.delete(save=False)
+        clear_stored_user_media(image.image)
         image.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

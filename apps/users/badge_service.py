@@ -72,7 +72,11 @@ def sync_auto_badges(user) -> list[UserBadge]:
     return synced
 
 
-def validate_badge_document(uploaded_file) -> None:
+def validate_badge_document(uploaded_file=None, *, document_url: str = '') -> None:
+    from apps.uploads.cloudinary_utils import is_cloudinary_url
+
+    if document_url and is_cloudinary_url(document_url):
+        return
     if uploaded_file is None:
         raise ValidationError({'verification_document': 'A document file is required.'})
     if uploaded_file.size > MAX_BADGE_DOCUMENT_BYTES:
@@ -86,6 +90,45 @@ def validate_badge_document(uploaded_file) -> None:
                 'verification_document': 'Only JPG, PNG, WebP, and PDF files are allowed.',
             }
         )
+
+
+def persist_badge_document(user, *, uploaded_file=None, document_url: str = '') -> str:
+    from apps.uploads.cloudinary_folders import cloudinary_users_badges_folder
+    from apps.uploads.cloudinary_utils import (
+        cloudinary_enabled,
+        infer_cloudinary_resource_type,
+        is_cloudinary_url,
+        upload_file_to_cloudinary,
+    )
+    import os
+    import uuid
+
+    from django.core.files.storage import default_storage
+
+    if document_url and is_cloudinary_url(document_url):
+        return document_url.strip()
+
+    if uploaded_file is None:
+        return ''
+
+    folder = cloudinary_users_badges_folder(user.id)
+    if cloudinary_enabled():
+        try:
+            result = upload_file_to_cloudinary(
+                uploaded_file,
+                folder=folder,
+                resource_type=infer_cloudinary_resource_type(uploaded_file),
+            )
+            url = result.get('secure_url') or result.get('url')
+            if url:
+                return url
+        except Exception:
+            pass
+
+    ext = os.path.splitext(uploaded_file.name)[1].lower() or ''
+    filename = f'{uuid.uuid4().hex}{ext}'
+    relative_path = f'sajilowork/badge_verification/{user.id}/{filename}'
+    return default_storage.save(relative_path, uploaded_file)
 
 
 def _document_link_key(badge: UserBadge) -> str:
@@ -145,6 +188,7 @@ def request_badge(
     badge_type: str,
     *,
     uploaded_file=None,
+    document_url: str = '',
     document_number: str = '',
     custom_name: str = '',
     custom_description: str = '',
@@ -159,7 +203,7 @@ def request_badge(
         raise ValidationError({'badge_type': 'This badge type cannot be requested.'})
 
     if badge_type in DOCUMENT_REQUIRED_BADGE_TYPES:
-        validate_badge_document(uploaded_file)
+        validate_badge_document(uploaded_file, document_url=document_url)
 
     if badge_type == 'custom_licence':
         name = (custom_name or '').strip()
@@ -202,11 +246,18 @@ def request_badge(
         )
         badge.description = description
         badge.document_number = (document_number or '').strip()
-        if uploaded_file is not None:
-            badge.verification_document = uploaded_file
+        stored_document = persist_badge_document(
+            user,
+            uploaded_file=uploaded_file,
+            document_url=document_url,
+        )
+        if stored_document:
+            badge.verification_document = stored_document
         badge.is_verified = False
         badge.verified_at = None
         badge.save()
+        if stored_document and badge.badge_type in DOCUMENT_REQUIRED_BADGE_TYPES:
+            _sync_user_document_for_badge(user, badge, document_url=stored_document)
         return badge, created
 
     name, description = _catalog_defaults(badge_type)
@@ -230,12 +281,20 @@ def request_badge(
     badge.description = description
     badge.document_number = (document_number or '').strip()
 
-    if uploaded_file is not None:
-        badge.verification_document = uploaded_file
+    stored_document = persist_badge_document(
+        user,
+        uploaded_file=uploaded_file,
+        document_url=document_url,
+    )
+    if stored_document:
+        badge.verification_document = stored_document
 
     badge.is_verified = False
     badge.verified_at = None
     badge.save()
+
+    if stored_document and badge.badge_type in DOCUMENT_REQUIRED_BADGE_TYPES:
+        _sync_user_document_for_badge(user, badge, document_url=stored_document)
 
     return badge, created
 
@@ -245,6 +304,7 @@ def request_or_sync_badge(
     badge_type: str,
     *,
     uploaded_file=None,
+    document_url: str = '',
     document_number: str = '',
     custom_name: str = '',
     custom_description: str = '',
@@ -265,6 +325,7 @@ def request_or_sync_badge(
         user,
         badge_type,
         uploaded_file=uploaded_file,
+        document_url=document_url,
         document_number=document_number,
         custom_name=custom_name,
         custom_description=custom_description,

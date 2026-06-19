@@ -23,6 +23,7 @@ from .cloudinary_folders import (
 from .cloudinary_utils import (
     cloudinary_browser_upload_enabled,
     cloudinary_server_upload_enabled,
+    infer_cloudinary_resource_type,
     is_cloudinary_auth_error,
     is_cloudinary_permission_error,
     upload_file_to_cloudinary,
@@ -87,14 +88,16 @@ class CloudinaryUploadView(APIView):
             return Response({'detail': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            validate_image_upload(uploaded)
+            if infer_cloudinary_resource_type(uploaded) == 'image':
+                validate_image_upload(uploaded)
         except ValueError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         folder = resolve_cloudinary_folder(request.data.get('folder'))
+        resource_type = infer_cloudinary_resource_type(uploaded)
 
         try:
-            result = upload_file_to_cloudinary(uploaded, folder=folder)
+            result = upload_file_to_cloudinary(uploaded, folder=folder, resource_type=resource_type)
         except Exception as exc:
             if is_cloudinary_auth_error(exc):
                 return Response(

@@ -8,6 +8,14 @@ from urllib.parse import urlparse
 from django.conf import settings
 from django.core.files.storage import default_storage
 
+from apps.uploads.cloudinary_folders import cloudinary_users_portfolio_folder
+from apps.uploads.cloudinary_utils import (
+    cloudinary_enabled,
+    infer_cloudinary_resource_type,
+    is_cloudinary_url,
+    upload_file_to_cloudinary,
+)
+
 from .models import PortfolioItem, UserDocument
 
 PORTFOLIO_DOCUMENT_TYPE = 'portfolio'
@@ -33,14 +41,38 @@ def portfolio_item_id_from_document_number(document_number: str) -> str | None:
 
 
 def save_portfolio_upload(user, uploaded_file) -> str:
-    """Persist file under media/portfolio/<user_id>/ and return storage-relative path."""
+    """Persist portfolio file to Cloudinary or local media; return stored URL/path."""
+    folder = cloudinary_users_portfolio_folder(user.id)
+    if cloudinary_enabled():
+        try:
+            result = upload_file_to_cloudinary(
+                uploaded_file,
+                folder=folder,
+                resource_type=infer_cloudinary_resource_type(uploaded_file),
+            )
+            url = result.get('secure_url') or result.get('url')
+            if url:
+                return url
+        except Exception:
+            pass
+
     ext = os.path.splitext(uploaded_file.name)[1].lower() or ''
     filename = f'{uuid.uuid4().hex}{ext}'
     relative_path = f'portfolio/{user.id}/{filename}'
     return default_storage.save(relative_path, uploaded_file)
 
 
+def resolve_portfolio_stored_url(request, stored_value: str) -> str:
+    if not stored_value:
+        return stored_value
+    if is_cloudinary_url(stored_value) or stored_value.startswith('http://') or stored_value.startswith('https://'):
+        return stored_value
+    return build_portfolio_file_url(request, stored_value)
+
+
 def build_portfolio_file_url(request, storage_path: str) -> str:
+    if is_cloudinary_url(storage_path) or storage_path.startswith('http://') or storage_path.startswith('https://'):
+        return storage_path
     media_url = default_storage.url(storage_path)
     if media_url.startswith('http://') or media_url.startswith('https://'):
         return media_url
@@ -50,9 +82,9 @@ def build_portfolio_file_url(request, storage_path: str) -> str:
 def resolve_portfolio_file_url(request, stored_url: str) -> str:
     if not stored_url:
         return stored_url
-    if stored_url.startswith('http://') or stored_url.startswith('https://'):
+    if is_cloudinary_url(stored_url) or stored_url.startswith('http://') or stored_url.startswith('https://'):
         return stored_url
-    return request.build_absolute_uri(stored_url)
+    return request.build_absolute_uri(stored_url) if request else stored_url
 
 
 def storage_path_from_file_url(file_url: str) -> str | None:

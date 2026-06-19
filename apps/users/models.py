@@ -328,11 +328,11 @@ class UserBadge(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     icon_url = models.URLField(blank=True, null=True)
-    verification_document = models.FileField(
-        upload_to='sajilowork/badge_verification/%Y/%m/',
+    verification_document = models.CharField(
+        max_length=2048,
         blank=True,
-        null=True,
-        help_text='Uploaded certificate or police check document.',
+        default='',
+        help_text='Uploaded certificate or police check document URL (Cloudinary) or local path.',
     )
     document_number = models.CharField(
         max_length=100,
@@ -562,10 +562,11 @@ class EmployerProfile(models.Model):
     contact_phone = models.CharField(max_length=30, blank=True)
     logo_color = models.CharField(max_length=40, default='serif-m')
     logo_text = models.CharField(max_length=8, default='CO')
-    logo_image = models.ImageField(
-        upload_to='sajilowork/employer_logos/',
+    logo_image = models.CharField(
+        max_length=2048,
         blank=True,
-        null=True,
+        default='',
+        help_text='Employer logo URL (Cloudinary) or local media path',
     )
     is_public = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -591,7 +592,10 @@ class EmployerGalleryImage(models.Model):
         on_delete=models.CASCADE,
         related_name='gallery_images',
     )
-    image = models.ImageField(upload_to='sajilowork/employer_gallery/')
+    image = models.CharField(
+        max_length=2048,
+        help_text='Gallery image URL (Cloudinary) or local media path',
+    )
     alt_text = models.CharField(max_length=255, blank=True)
     sort_order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)

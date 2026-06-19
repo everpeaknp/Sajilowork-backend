@@ -253,14 +253,11 @@ class DashboardService:
 
     @staticmethod
     def _user_avatar_url(user) -> str:
-        if not user or not getattr(user, 'profile_image', None):
+        from apps.users.user_media_utils import resolve_user_media_url
+
+        if not user:
             return ''
-        try:
-            if not user.profile_image:
-                return ''
-            return str(user.profile_image.url).strip()
-        except (ValueError, AttributeError):
-            return ''
+        return str(resolve_user_media_url(None, getattr(user, 'profile_image', None)) or '').strip()
 
     @staticmethod
     def _owner_business_profile_for_listing(task: Task) -> dict:
@@ -269,10 +266,9 @@ class DashboardService:
 
         logo_url = ''
         if profile and profile.logo_image:
-            try:
-                logo_url = str(profile.logo_image.url).strip()
-            except (ValueError, AttributeError):
-                logo_url = ''
+            from apps.users.employer_profile_service import resolve_employer_image_url
+
+            logo_url = str(resolve_employer_image_url(None, profile.logo_image) or '').strip()
         if not logo_url and owner:
             logo_url = DashboardService._user_avatar_url(owner)
 

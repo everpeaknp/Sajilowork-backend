@@ -32,8 +32,8 @@ class NotificationSerializer(serializers.ModelSerializer):
 class NotificationListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for notification lists"""
     sender_name = serializers.CharField(source='sender.get_full_name', read_only=True)
-    sender_avatar = serializers.ImageField(source='sender.profile_image', read_only=True)
-    
+    sender_avatar = serializers.SerializerMethodField()
+
     class Meta:
         model = Notification
         fields = [
@@ -41,6 +41,15 @@ class NotificationListSerializer(serializers.ModelSerializer):
             'sender_name', 'sender_avatar', 'action_url',
             'is_read', 'is_archived', 'created_at'
         ]
+
+    def get_sender_avatar(self, obj):
+        from apps.users.user_media_utils import resolve_user_media_url
+
+        sender = getattr(obj, 'sender', None)
+        return resolve_user_media_url(
+            self.context.get('request'),
+            getattr(sender, 'profile_image', None) if sender else None,
+        )
 
 
 class NotificationCreateSerializer(serializers.ModelSerializer):

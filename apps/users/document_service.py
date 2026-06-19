@@ -1,13 +1,17 @@
-"""
-User document uploads: store files and keep UserDocument rows in sync.
-"""
-
 import os
 import uuid
 from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.files.storage import default_storage
+
+from apps.uploads.cloudinary_folders import cloudinary_users_documents_folder
+from apps.uploads.cloudinary_utils import (
+    cloudinary_enabled,
+    infer_cloudinary_resource_type,
+    is_cloudinary_url,
+    upload_file_to_cloudinary,
+)
 
 from .models import UserDocument
 
@@ -20,7 +24,21 @@ ALLOWED_DOCUMENT_CONTENT_TYPES = {
 
 
 def save_user_document_upload(user, uploaded_file) -> str:
-    """Persist file under media/user_documents/<user_id>/ and return storage-relative path."""
+    """Persist document to Cloudinary or local media; return stored URL/path."""
+    folder = cloudinary_users_documents_folder(user.id)
+    if cloudinary_enabled():
+        try:
+            result = upload_file_to_cloudinary(
+                uploaded_file,
+                folder=folder,
+                resource_type=infer_cloudinary_resource_type(uploaded_file),
+            )
+            url = result.get('secure_url') or result.get('url')
+            if url:
+                return url
+        except Exception:
+            pass
+
     ext = os.path.splitext(uploaded_file.name)[1].lower() or ''
     filename = f'{uuid.uuid4().hex}{ext}'
     relative_path = f'user_documents/{user.id}/{filename}'
@@ -28,6 +46,8 @@ def save_user_document_upload(user, uploaded_file) -> str:
 
 
 def build_document_url(request, storage_path: str) -> str:
+    if is_cloudinary_url(storage_path) or storage_path.startswith('http://') or storage_path.startswith('https://'):
+        return storage_path
     media_url = default_storage.url(storage_path)
     if media_url.startswith('http://') or media_url.startswith('https://'):
         return media_url
@@ -37,9 +57,9 @@ def build_document_url(request, storage_path: str) -> str:
 def resolve_document_url(request, stored_url: str) -> str:
     if not stored_url:
         return stored_url
-    if stored_url.startswith('http://') or stored_url.startswith('https://'):
+    if is_cloudinary_url(stored_url) or stored_url.startswith('http://') or stored_url.startswith('https://'):
         return stored_url
-    return request.build_absolute_uri(stored_url)
+    return request.build_absolute_uri(stored_url) if request else stored_url
 
 
 def storage_path_from_document_url(document_url: str) -> str | None:

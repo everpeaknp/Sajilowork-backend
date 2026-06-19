@@ -10,6 +10,7 @@ from apps.search.models import (
 from apps.tasks.models import Task, Category
 from apps.tasks.serializers import TaskOwnerEmployerMixin, _resolve_owner_personal_name
 from apps.users.models import User
+from apps.users.user_media_utils import resolve_user_media_url
 
 
 class SearchHistorySerializer(serializers.ModelSerializer):
@@ -125,16 +126,7 @@ class TaskSearchResultSerializer(TaskOwnerEmployerMixin, serializers.ModelSerial
 
     def get_owner_image(self, obj):
         owner = getattr(obj, 'owner', None)
-        if not owner or not getattr(owner, 'profile_image', None):
-            return None
-        try:
-            url = owner.profile_image.url
-        except (ValueError, AttributeError):
-            return None
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(url)
-        return url
+        return resolve_user_media_url(self.context.get('request'), getattr(owner, 'profile_image', None) if owner else None)
 
     def get_owner_is_verified(self, obj):
         owner = getattr(obj, 'owner', None)

@@ -3,6 +3,15 @@ import os
 import re
 import uuid
 
+from apps.uploads.cloudinary_folders import (
+    cloudinary_employers_gallery_folder,
+    cloudinary_employers_logo_folder,
+)
+from apps.uploads.cloudinary_utils import (
+    is_cloudinary_url,
+    upload_image_to_cloudinary_or_raise,
+)
+from apps.users.user_media_utils import clear_stored_user_media
 from django.core.files.storage import default_storage
 from django.db.models import Q
 
@@ -101,17 +110,13 @@ def get_employer_user_by_slug(slug: str) -> User | None:
 
 
 def save_employer_logo_upload(user: User, uploaded_file) -> str:
-    ext = os.path.splitext(uploaded_file.name)[1].lower() or '.jpg'
-    filename = f'{uuid.uuid4().hex}{ext}'
-    relative_path = f'employer_logos/{user.id}/{filename}'
-    return default_storage.save(relative_path, uploaded_file)
+    folder = cloudinary_employers_logo_folder(user.id)
+    return upload_image_to_cloudinary_or_raise(uploaded_file, folder=folder)
 
 
 def save_employer_gallery_upload(user: User, uploaded_file) -> str:
-    ext = os.path.splitext(uploaded_file.name)[1].lower() or '.jpg'
-    filename = f'{uuid.uuid4().hex}{ext}'
-    relative_path = f'employer_gallery/{user.id}/{filename}'
-    return default_storage.save(relative_path, uploaded_file)
+    folder = cloudinary_employers_gallery_folder(user.id)
+    return upload_image_to_cloudinary_or_raise(uploaded_file, folder=folder)
 
 
 def build_employer_media_url(request, storage_path: str) -> str:
