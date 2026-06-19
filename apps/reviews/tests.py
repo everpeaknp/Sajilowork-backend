@@ -121,3 +121,28 @@ class ReviewSystemTests(TestCase):
             ReviewInvitation.objects.filter(task=self.task).count(),
             2,
         )
+
+    def test_get_reviewable_tasks_for_reviewee(self):
+        owner_tasks = ReviewService.get_reviewable_tasks_for_reviewee(
+            self.owner,
+            self.tasker.id,
+        )
+        self.assertEqual(len(owner_tasks), 1)
+        self.assertEqual(owner_tasks[0].id, self.task.id)
+
+        tasker_tasks = ReviewService.get_reviewable_tasks_for_reviewee(
+            self.tasker,
+            self.owner.id,
+        )
+        self.assertEqual(len(tasker_tasks), 1)
+
+        ReviewService.create_review(
+            task_id=self.task.id,
+            reviewer=self.owner,
+            rating=5,
+        )
+        owner_tasks_after = ReviewService.get_reviewable_tasks_for_reviewee(
+            self.owner,
+            self.tasker.id,
+        )
+        self.assertEqual(len(owner_tasks_after), 0)

@@ -122,6 +122,41 @@ class ReviewService:
         return reviewer_type
 
     @staticmethod
+    def get_reviewable_tasks_for_reviewee(reviewer: User, reviewee_id) -> list[Task]:
+        """Completed tasks between reviewer and reviewee where reviewer may still leave a review."""
+        try:
+            reviewee = User.objects.get(pk=reviewee_id)
+        except (User.DoesNotExist, ValueError, TypeError):
+            return []
+
+        if reviewer.id == reviewee.id:
+            return []
+
+        reviewed_ids = Review.objects.filter(reviewer=reviewer).values_list('task_id', flat=True)
+        tasks = (
+            Task.objects.filter(
+                status='completed',
+                assigned_tasker_id__isnull=False,
+            )
+            .exclude(id__in=reviewed_ids)
+            .filter(
+                Q(owner=reviewer, assigned_tasker=reviewee)
+                | Q(assigned_tasker=reviewer, owner=reviewee)
+            )
+            .select_related('owner', 'assigned_tasker')
+            .order_by('-completed_at', '-updated_at')
+        )
+
+        eligible: list[Task] = []
+        for task in tasks:
+            try:
+                ReviewService.assert_can_review(task, reviewer)
+            except ReviewEligibilityError:
+                continue
+            eligible.append(task)
+        return eligible
+
+    @staticmethod
     def assert_can_review_service_listing(service: Task, reviewer: User) -> None:
         """Allow authenticated users to review a public service listing without a completed order."""
         if get_listing_kind(service.tags) != LISTING_KIND_SERVICE:

@@ -108,6 +108,24 @@ class ReviewViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def eligible_tasks(self, request):
+        """
+        GET /api/v1/reviews/eligible_tasks/?reviewee_id=<uuid>
+        Completed work with reviewee that the current user can still review.
+        """
+        reviewee_id = request.query_params.get('reviewee_id')
+        if not reviewee_id:
+            return Response(
+                {'detail': 'reviewee_id is required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        tasks = ReviewService.get_reviewable_tasks_for_reviewee(request.user, reviewee_id)
+        return Response([
+            {'task_id': str(task.id), 'task_title': task.title or 'Completed work'}
+            for task in tasks
+        ])
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def pending_invitations(self, request):
         invitations = ReviewInvitation.objects.filter(
             invitee=request.user,
