@@ -411,9 +411,11 @@ class UserKYCAdmin(admin.ModelAdmin):
         user = obj.user
         profile_block = ''
         if user.profile_image:
+            from apps.users.user_media_utils import resolve_user_media_url
+
             profile_block = format_html(
                 '<p><img src="{}" alt="Profile" style="max-height:96px;border-radius:12px;" /></p>',
-                user.profile_image.url,
+                resolve_user_media_url(None, user.profile_image),
             )
         return format_html(
             '{}'

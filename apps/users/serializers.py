@@ -10,6 +10,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.base_user import BaseUserManager
 from django.core.exceptions import ValidationError
 from .models import User, UserSkill, UserBadge, UserDocument, PortfolioItem, UserKYC
+from .user_media_utils import resolve_user_media_url
 
 
 def _short_city_label(value):
@@ -311,12 +312,7 @@ class UserListSerializer(serializers.ModelSerializer):
 
     def get_profile_image(self, obj):
         """Return full URL for profile image (same as UserDetailSerializer)."""
-        if obj.profile_image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.profile_image.url)
-            return obj.profile_image.url
-        return None
+        return resolve_user_media_url(self.context.get('request'), obj.profile_image)
 
 
 class PublicUserSerializer(serializers.ModelSerializer):
@@ -345,12 +341,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_profile_image(self, obj):
-        if obj.profile_image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.profile_image.url)
-            return obj.profile_image.url
-        return None
+        return resolve_user_media_url(self.context.get('request'), obj.profile_image)
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
@@ -403,21 +394,11 @@ class UserDetailSerializer(serializers.ModelSerializer):
     
     def get_profile_image(self, obj):
         """Return full URL for profile image."""
-        if obj.profile_image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.profile_image.url)
-            return obj.profile_image.url
-        return None
-    
+        return resolve_user_media_url(self.context.get('request'), obj.profile_image)
+
     def get_cover_image(self, obj):
         """Return full URL for cover image."""
-        if obj.cover_image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.cover_image.url)
-            return obj.cover_image.url
-        return None
+        return resolve_user_media_url(self.context.get('request'), obj.cover_image)
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -646,12 +627,7 @@ class UserDirectorySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_profile_image(self, obj):
-        if obj.profile_image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.profile_image.url)
-            return obj.profile_image.url
-        return None
+        return resolve_user_media_url(self.context.get('request'), obj.profile_image)
 
     def get_location_display(self, obj):
         return _short_location_display(obj)
@@ -705,12 +681,7 @@ class TaskerPublicProfileSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_profile_image(self, obj):
-        if obj.profile_image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.profile_image.url)
-            return obj.profile_image.url
-        return None
+        return resolve_user_media_url(self.context.get('request'), obj.profile_image)
 
 
 class PublicProfileSerializer(TaskerPublicProfileSerializer):

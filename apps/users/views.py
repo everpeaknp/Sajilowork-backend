@@ -403,15 +403,19 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='me/upload-image', permission_classes=[IsAuthenticated])
     def upload_image(self, request):
         """Upload profile image (Cloudinary URL, server upload, or local media)."""
-        from django.core.files.base import ContentFile
-        import requests
+        import os
+        import uuid
 
+        from django.core.files.storage import default_storage
+
+        from apps.uploads.cloudinary_folders import cloudinary_users_profiles_folder
         from apps.uploads.cloudinary_utils import (
             cloudinary_enabled,
             is_cloudinary_permission_error,
             is_cloudinary_url,
             upload_file_to_cloudinary,
         )
+        from apps.users.user_media_utils import clear_stored_user_media
 
         image_url = (request.data.get('image_url') or request.data.get('cloudinary_url') or '').strip()
         file = request.FILES.get('profile_image')
@@ -443,46 +447,44 @@ class UserViewSet(viewsets.ModelViewSet):
                 )
 
         try:
-            if request.user.profile_image:
-                request.user.profile_image.delete(save=False)
-
-            folder = f"{getattr(settings, 'CLOUDINARY_DEFAULT_FOLDER', 'sajilowork')}/profile_images"
+            clear_stored_user_media(request.user.profile_image)
+            folder = cloudinary_users_profiles_folder()
+            stored_value = ''
 
             if image_url:
-                response = requests.get(image_url, timeout=30)
-                response.raise_for_status()
-                filename = image_url.rstrip('/').split('/')[-1] or 'profile.jpg'
-                request.user.profile_image.save(
-                    filename,
-                    ContentFile(response.content),
-                    save=False,
-                )
-            elif file and cloudinary_enabled() and getattr(settings, 'CLOUDINARY_USE_DEFAULT_STORAGE', False):
+                stored_value = image_url
+            elif file and cloudinary_enabled():
                 try:
                     result = upload_file_to_cloudinary(file, folder=folder)
-                    url = result.get('secure_url') or result.get('url')
-                    if url:
-                        img_response = requests.get(url, timeout=30)
-                        img_response.raise_for_status()
-                        filename = file.name or 'profile.jpg'
-                        request.user.profile_image.save(
-                            filename,
-                            ContentFile(img_response.content),
-                            save=False,
-                        )
-                    else:
-                        request.user.profile_image = file
+                    stored_value = result.get('secure_url') or result.get('url') or ''
                 except Exception as exc:
                     if is_cloudinary_permission_error(exc):
-                        if hasattr(file, 'seek'):
-                            file.seek(0)
-                        request.user.profile_image = file
-                    else:
-                        raise
-            elif file:
-                request.user.profile_image = file
+                        return Response(
+                            {
+                                'error': (
+                                    'Cloudinary API key lacks upload permission. Assign an upload-capable role '
+                                    'in Cloudinary Console → Settings → API Keys, or set CLOUDINARY_UPLOAD_PRESET '
+                                    'for unsigned browser uploads.'
+                                ),
+                            },
+                            status=status.HTTP_403_FORBIDDEN,
+                        )
+                    raise
 
-            request.user.save()
+            if not stored_value and file:
+                ext = os.path.splitext(file.name or '')[1].lower() or '.jpg'
+                relative_path = f'sajilowork/profile_images/{uuid.uuid4().hex}{ext}'
+                saved_path = default_storage.save(relative_path, file)
+                stored_value = saved_path
+
+            if not stored_value:
+                return Response(
+                    {'error': 'Failed to store profile image.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            request.user.profile_image = stored_value
+            request.user.save(update_fields=['profile_image', 'updated_at'])
 
             serializer = UserDetailSerializer(request.user, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)

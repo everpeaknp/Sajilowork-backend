@@ -7,8 +7,23 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .cloudinary_folders import (
+    cloudinary_chat_folder,
+    cloudinary_folder,
+    cloudinary_jobs_folder,
+    cloudinary_projects_folder,
+    cloudinary_services_folder,
+    cloudinary_task_attachments_folder,
+    cloudinary_uploads_folder,
+    cloudinary_users_covers_folder,
+    cloudinary_users_profiles_folder,
+    get_cloudinary_root,
+    resolve_cloudinary_folder,
+)
 from .cloudinary_utils import (
-    cloudinary_enabled,
+    cloudinary_browser_upload_enabled,
+    cloudinary_server_upload_enabled,
+    is_cloudinary_auth_error,
     is_cloudinary_permission_error,
     upload_file_to_cloudinary,
     validate_image_upload,
@@ -24,14 +39,28 @@ class CloudinaryConfigView(APIView):
         storage = getattr(settings, 'CLOUDINARY_STORAGE', {})
         cloud_name = (storage.get('CLOUD_NAME') or '').strip()
         upload_preset = (getattr(settings, 'CLOUDINARY_UPLOAD_PRESET', '') or '').strip()
-        enabled = cloudinary_enabled()
+        browser_upload = cloudinary_browser_upload_enabled()
+        server_upload = cloudinary_server_upload_enabled()
 
         return Response(
             {
-                'enabled': enabled,
-                'cloud_name': cloud_name if enabled else '',
-                'upload_preset': upload_preset if enabled and upload_preset else '',
-                'folder': getattr(settings, 'CLOUDINARY_DEFAULT_FOLDER', 'sajilowork'),
+                'enabled': browser_upload or server_upload,
+                'browser_upload': browser_upload,
+                'server_upload': server_upload,
+                'cloud_name': cloud_name if browser_upload or server_upload else '',
+                'upload_preset': upload_preset if browser_upload else '',
+                'folder': get_cloudinary_root(),
+                'folders': {
+                    'users': cloudinary_folder('Users'),
+                    'usersProfiles': cloudinary_users_profiles_folder(),
+                    'usersCovers': cloudinary_users_covers_folder(),
+                    'tasks': cloudinary_folder('Tasks'),
+                    'services': cloudinary_services_folder(),
+                    'projects': cloudinary_projects_folder(),
+                    'jobs': cloudinary_jobs_folder(),
+                    'uploads': cloudinary_uploads_folder(),
+                    'chat': cloudinary_chat_folder(),
+                },
             }
         )
 
@@ -42,9 +71,14 @@ class CloudinaryUploadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if not cloudinary_enabled():
+        if not cloudinary_server_upload_enabled():
             return Response(
-                {'detail': 'Cloudinary is not configured on the server.'},
+                {
+                    'detail': (
+                        'Server-side Cloudinary upload is not configured. '
+                        'Set CLOUDINARY_API_SECRET correctly or use CLOUDINARY_UPLOAD_PRESET for browser uploads.'
+                    ),
+                },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
@@ -57,11 +91,22 @@ class CloudinaryUploadView(APIView):
         except ValueError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        folder = (request.data.get('folder') or getattr(settings, 'CLOUDINARY_DEFAULT_FOLDER', 'sajilowork')).strip()
+        folder = resolve_cloudinary_folder(request.data.get('folder'))
 
         try:
             result = upload_file_to_cloudinary(uploaded, folder=folder)
         except Exception as exc:
+            if is_cloudinary_auth_error(exc):
+                return Response(
+                    {
+                        'detail': (
+                            'Cloudinary API secret does not match the API key. '
+                            'Copy the full API secret from Cloudinary Console → Settings → API Keys, '
+                            'or use an unsigned CLOUDINARY_UPLOAD_PRESET for browser uploads.'
+                        ),
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             if is_cloudinary_permission_error(exc):
                 return Response(
                     {

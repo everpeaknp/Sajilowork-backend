@@ -124,6 +124,10 @@ def build_employer_media_url(request, storage_path: str) -> str:
 def resolve_employer_image_url(request, image_field) -> str | None:
     if not image_field:
         return None
+    if isinstance(image_field, str):
+        from apps.users.user_media_utils import resolve_user_media_url
+
+        return resolve_user_media_url(request, image_field)
     try:
         url = image_field.url
     except (ValueError, AttributeError):

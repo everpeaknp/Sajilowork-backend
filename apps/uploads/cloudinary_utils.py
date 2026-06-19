@@ -20,6 +20,17 @@ def cloudinary_enabled() -> bool:
     return bool(cloud_name and api_key and api_secret)
 
 
+def cloudinary_browser_upload_enabled() -> bool:
+    storage = getattr(settings, 'CLOUDINARY_STORAGE', {})
+    cloud_name = (storage.get('CLOUD_NAME') or '').strip()
+    upload_preset = (getattr(settings, 'CLOUDINARY_UPLOAD_PRESET', '') or '').strip()
+    return bool(cloud_name and upload_preset)
+
+
+def cloudinary_server_upload_enabled() -> bool:
+    return cloudinary_enabled()
+
+
 def configure_cloudinary() -> None:
     import cloudinary
 
@@ -45,6 +56,15 @@ def validate_image_upload(uploaded_file) -> None:
 def is_cloudinary_permission_error(exc: BaseException) -> bool:
     message = str(exc).lower()
     return 'forbidden' in message or 'missing permissions' in message or 'actions=["create"]' in message
+
+
+def is_cloudinary_auth_error(exc: BaseException) -> bool:
+    message = str(exc).lower()
+    return (
+        'invalid signature' in message
+        or 'api_secret mismatch' in message
+        or 'unknown api key' in message
+    )
 
 
 def is_cloudinary_url(url: str) -> bool:

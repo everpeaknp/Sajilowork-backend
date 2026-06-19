@@ -97,18 +97,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     bio = models.TextField(blank=True, help_text="Short bio about the user")
     tagline = models.CharField(max_length=255, blank=True, help_text="Professional tagline")
     
-    # Profile media
-    profile_image = models.ImageField(
-        upload_to='sajilowork/profile_images/',
+    # Profile media (Cloudinary URL or local media path)
+    profile_image = models.CharField(
+        max_length=2048,
         blank=True,
-        null=True,
-        help_text="Profile image"
+        default='',
+        help_text='Profile image URL (Cloudinary) or local media path',
     )
-    cover_image = models.ImageField(
-        upload_to='sajilowork/cover_images/',
+    cover_image = models.CharField(
+        max_length=2048,
         blank=True,
-        null=True,
-        help_text="Cover image"
+        default='',
+        help_text='Cover image URL (Cloudinary) or local media path',
     )
     
     # Role and permissions

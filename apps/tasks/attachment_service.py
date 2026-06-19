@@ -7,6 +7,7 @@ import uuid
 from django.conf import settings
 from django.core.files.storage import default_storage
 
+from apps.uploads.cloudinary_folders import cloudinary_task_attachments_folder
 from apps.uploads.cloudinary_utils import (
     cloudinary_enabled,
     is_cloudinary_permission_error,
@@ -59,7 +60,7 @@ def save_task_attachment_upload(user, task, uploaded_file) -> str:
     filename = uploaded_file.name or 'attachment'
 
     if _is_image_upload(content_type, filename) and cloudinary_enabled():
-        folder = f"{getattr(settings, 'CLOUDINARY_DEFAULT_FOLDER', 'sajilowork')}/task_attachments/{task.id}"
+        folder = cloudinary_task_attachments_folder(task.id)
         try:
             result = upload_file_to_cloudinary(uploaded_file, folder=folder)
             url = result.get('secure_url') or result.get('url')
