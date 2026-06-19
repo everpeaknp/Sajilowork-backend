@@ -402,47 +402,105 @@ class UserViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'], url_path='me/upload-image', permission_classes=[IsAuthenticated])
     def upload_image(self, request):
-        """Upload profile image to local media folder."""
+        """Upload profile image (Cloudinary URL, server upload, or local media)."""
+        from django.core.files.base import ContentFile
+        import requests
+
+        from apps.uploads.cloudinary_utils import (
+            cloudinary_enabled,
+            is_cloudinary_permission_error,
+            is_cloudinary_url,
+            upload_file_to_cloudinary,
+        )
+
+        image_url = (request.data.get('image_url') or request.data.get('cloudinary_url') or '').strip()
         file = request.FILES.get('profile_image')
-        if not file:
+
+        if not file and not image_url:
             return Response(
                 {'error': 'No image provided.', 'detail': 'Please select an image file to upload.'},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Validate file type
-        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-        if file.content_type not in allowed_types:
+        if image_url and not is_cloudinary_url(image_url):
             return Response(
-                {'error': 'Invalid file type. Only JPG, PNG, GIF, and WebP are allowed.'},
-                status=status.HTTP_400_BAD_REQUEST
+                {'error': 'Invalid image URL. Only Cloudinary URLs are accepted.'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Validate file size (5MB max)
-        if file.size > 5 * 1024 * 1024:
-            return Response(
-                {'error': 'File size exceeds 5MB limit.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Validate file when provided
+        if file:
+            allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+            if file.content_type not in allowed_types:
+                return Response(
+                    {'error': 'Invalid file type. Only JPG, PNG, GIF, and WebP are allowed.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if file.size > 5 * 1024 * 1024:
+                return Response(
+                    {'error': 'File size exceeds 5MB limit.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         try:
-            # Delete old profile image if exists
             if request.user.profile_image:
-                old_image_path = request.user.profile_image.path
-                if os.path.exists(old_image_path):
-                    os.remove(old_image_path)
-            
-            # Save new profile image
-            request.user.profile_image = file
+                request.user.profile_image.delete(save=False)
+
+            folder = f"{getattr(settings, 'CLOUDINARY_DEFAULT_FOLDER', 'sajilowork')}/profile_images"
+
+            if image_url:
+                response = requests.get(image_url, timeout=30)
+                response.raise_for_status()
+                filename = image_url.rstrip('/').split('/')[-1] or 'profile.jpg'
+                request.user.profile_image.save(
+                    filename,
+                    ContentFile(response.content),
+                    save=False,
+                )
+            elif file and cloudinary_enabled() and getattr(settings, 'CLOUDINARY_USE_DEFAULT_STORAGE', False):
+                try:
+                    result = upload_file_to_cloudinary(file, folder=folder)
+                    url = result.get('secure_url') or result.get('url')
+                    if url:
+                        img_response = requests.get(url, timeout=30)
+                        img_response.raise_for_status()
+                        filename = file.name or 'profile.jpg'
+                        request.user.profile_image.save(
+                            filename,
+                            ContentFile(img_response.content),
+                            save=False,
+                        )
+                    else:
+                        request.user.profile_image = file
+                except Exception as exc:
+                    if is_cloudinary_permission_error(exc):
+                        if hasattr(file, 'seek'):
+                            file.seek(0)
+                        request.user.profile_image = file
+                    else:
+                        raise
+            elif file:
+                request.user.profile_image = file
+
             request.user.save()
-            
-            # Return updated user data
+
             serializer = UserDetailSerializer(request.user, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
+            if is_cloudinary_permission_error(e):
+                return Response(
+                    {
+                        'error': (
+                            'Cloudinary API key lacks upload permission. Assign an upload-capable role '
+                            'in Cloudinary Console → Settings → API Keys, or use CLOUDINARY_UPLOAD_PRESET '
+                            'for unsigned browser uploads.'
+                        ),
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             return Response(
                 {'error': f'Failed to upload image: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=['post'], url_path='me/deactivate', permission_classes=[IsAuthenticated])

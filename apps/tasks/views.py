@@ -22,9 +22,10 @@ from .attachment_service import (
     TASK_ATTACHMENT_TYPE_ERROR,
     is_allowed_task_attachment,
     MAX_TASK_ATTACHMENT_BYTES,
-    build_task_attachment_file_url,
     classify_task_attachment_type,
     save_task_attachment_upload,
+    resolve_task_attachment_file_url,
+    validate_cloudinary_attachment_url,
 )
 from .serializers import (
     TaskListSerializer, TaskDetailSerializer, TaskCreateSerializer,
@@ -725,9 +726,11 @@ class TaskAttachmentViewSet(viewsets.ModelViewSet):
         )
     
     def create(self, request, *args, **kwargs):
-        """Accept multipart file upload and attach to a task owned by the user."""
+        """Accept multipart file upload or a Cloudinary image URL."""
         uploaded_file = request.FILES.get('file')
-        if not uploaded_file:
+        file_url = (request.data.get('file_url') or '').strip()
+
+        if not uploaded_file and not file_url:
             return Response(
                 {'error': 'No file provided.'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -748,6 +751,29 @@ class TaskAttachmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        if file_url:
+            try:
+                validate_cloudinary_attachment_url(file_url)
+            except ValueError as exc:
+                return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+            file_name = (request.data.get('file_name') or 'attachment')[:255]
+            try:
+                file_size = int(request.data.get('file_size') or 0)
+            except (TypeError, ValueError):
+                file_size = 0
+
+            attachment = TaskAttachment.objects.create(
+                task=task,
+                file_url=file_url,
+                file_name=file_name,
+                file_type='image',
+                file_size=file_size,
+                uploaded_by=request.user,
+            )
+            serializer = self.get_serializer(attachment)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
         if uploaded_file.size > MAX_TASK_ATTACHMENT_BYTES:
             return Response(
                 {'error': 'File size exceeds 10MB limit.'},
@@ -767,8 +793,8 @@ class TaskAttachmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        storage_path = save_task_attachment_upload(request.user, task, uploaded_file)
-        file_url = build_task_attachment_file_url(request, storage_path)
+        stored = save_task_attachment_upload(request.user, task, uploaded_file)
+        file_url = resolve_task_attachment_file_url(request, stored)
 
         attachment = TaskAttachment.objects.create(
             task=task,

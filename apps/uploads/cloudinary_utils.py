@@ -1,0 +1,66 @@
+"""
+Shared Cloudinary helpers.
+"""
+from django.conf import settings
+
+ALLOWED_IMAGE_TYPES = {
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+}
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+
+
+def cloudinary_enabled() -> bool:
+    storage = getattr(settings, 'CLOUDINARY_STORAGE', {})
+    cloud_name = (storage.get('CLOUD_NAME') or '').strip()
+    api_key = (storage.get('API_KEY') or '').strip()
+    api_secret = (storage.get('API_SECRET') or '').strip()
+    return bool(cloud_name and api_key and api_secret)
+
+
+def configure_cloudinary() -> None:
+    import cloudinary
+
+    storage = settings.CLOUDINARY_STORAGE
+    cloudinary.config(
+        cloud_name=storage['CLOUD_NAME'],
+        api_key=storage['API_KEY'],
+        api_secret=storage['API_SECRET'],
+        secure=True,
+    )
+
+
+def validate_image_upload(uploaded_file) -> None:
+    content_type = (getattr(uploaded_file, 'content_type', '') or '').lower()
+    if content_type and content_type not in ALLOWED_IMAGE_TYPES:
+        raise ValueError('Invalid file type. Only JPG, PNG, GIF, and WebP are allowed.')
+
+    size = getattr(uploaded_file, 'size', 0) or 0
+    if size > MAX_IMAGE_BYTES:
+        raise ValueError('File size exceeds 10MB limit.')
+
+
+def is_cloudinary_permission_error(exc: BaseException) -> bool:
+    message = str(exc).lower()
+    return 'forbidden' in message or 'missing permissions' in message or 'actions=["create"]' in message
+
+
+def is_cloudinary_url(url: str) -> bool:
+    return 'res.cloudinary.com' in (url or '')
+
+
+def upload_file_to_cloudinary(uploaded_file, *, folder: str) -> dict:
+    """Upload via Cloudinary API (requires API key with create/upload permission)."""
+    configure_cloudinary()
+    import cloudinary.uploader
+
+    if hasattr(uploaded_file, 'seek'):
+        uploaded_file.seek(0)
+
+    return cloudinary.uploader.upload(
+        uploaded_file,
+        folder=folder,
+        resource_type='image',
+    )

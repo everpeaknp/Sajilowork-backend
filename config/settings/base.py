@@ -187,6 +187,13 @@ CLOUDINARY_STORAGE = {
     'API_KEY': config('CLOUDINARY_API_KEY', default=''),
     'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
 }
+CLOUDINARY_UPLOAD_PRESET = config('CLOUDINARY_UPLOAD_PRESET', default='')
+CLOUDINARY_DEFAULT_FOLDER = config('CLOUDINARY_DEFAULT_FOLDER', default='sajilowork')
+# New Cloudinary API keys need explicit "create/upload" roles. Keep local media unless opted in.
+CLOUDINARY_USE_DEFAULT_STORAGE = config('CLOUDINARY_USE_DEFAULT_STORAGE', default=False, cast=bool)
+
+if config('CLOUDINARY_CLOUD_NAME', default='') and CLOUDINARY_USE_DEFAULT_STORAGE:
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
