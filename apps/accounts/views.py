@@ -85,15 +85,25 @@ def login_view(request):
     
     email = serializer.validated_data['email']
     password = serializer.validated_data['password']
-    
-    try:
-        user = User.objects.get(email=email)
-    except User.DoesNotExist:
+
+    user = User.objects.filter(email__iexact=email).first()
+    if not user:
         return Response(
             {'error': 'Invalid credentials.'},
             status=status.HTTP_401_UNAUTHORIZED
         )
-    
+
+    if not user.has_usable_password():
+        return Response(
+            {
+                'error': (
+                    'This account uses social sign-in. '
+                    'Continue with Google or use Forgot password to set a password.'
+                ),
+            },
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
     if not user.check_password(password):
         return Response(
             {'error': 'Invalid credentials.'},
