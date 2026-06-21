@@ -12,7 +12,9 @@ from django.db import IntegrityError
 from django.db.models import Q, Count, Avg
 from django_filters.rest_framework import DjangoFilterBackend
 from django.conf import settings
-from django.core.mail import send_mail
+from django.utils import timezone
+from rest_framework_simplejwt.tokens import RefreshToken
+from apps.accounts import email_auth
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -909,12 +911,22 @@ class UserRegistrationView(generics.CreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        
-        # TODO: Send verification email
-        
+
+        try:
+            email_auth.send_email_verification_email(user)
+        except Exception:
+            if settings.DEBUG:
+                raise
+
+        refresh = RefreshToken.for_user(user)
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+
         return Response({
             'message': 'User registered successfully. Please verify your email.',
-            'user': UserDetailSerializer(user).data
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': UserDetailSerializer(user).data,
         }, status=status.HTTP_201_CREATED)
 
 
@@ -934,26 +946,11 @@ class PasswordResetRequestView(generics.GenericAPIView):
         # Avoid account enumeration: always return success, only send email if user exists.
         user = User.objects.filter(email__iexact=email).first()
         if user:
-            token_generator = PasswordResetTokenGenerator()
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = token_generator.make_token(user)
-
-            frontend = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
-            reset_link = f"{frontend}/reset-password?uid={uid}&token={token}"
-
-            subject = "Reset your password"
-            message = (
-                "You requested a password reset.\n\n"
-                f"Reset link: {reset_link}\n\n"
-                "If you didn’t request this, you can ignore this email."
-            )
-            send_mail(
-                subject=subject,
-                message=message,
-                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@airtasker.com'),
-                recipient_list=[user.email],
-                fail_silently=True,
-            )
+            try:
+                email_auth.send_password_reset_email(user)
+            except Exception:
+                if settings.DEBUG:
+                    raise
         
         return Response({
             'message': 'If an account exists for that email, a password reset link has been sent.'
@@ -1003,12 +1000,23 @@ class EmailVerificationView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     
     def post(self, request):
-        """Verify email with token."""
+        """Verify email with token from the verification link."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
-        # TODO: Validate token and verify email
-        
+
+        token = serializer.validated_data['token']
+        user_id, error = email_auth.verify_signed_email_token(token)
+        if error:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.filter(pk=user_id).first()
+        if not user:
+            return Response({'error': 'Invalid verification link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not user.email_verified:
+            user.email_verified = True
+            user.save(update_fields=['email_verified'])
+
         return Response({
             'message': 'Email verified successfully.'
         }, status=status.HTTP_200_OK)

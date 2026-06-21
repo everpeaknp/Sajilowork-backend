@@ -72,8 +72,14 @@ CACHES = {
 # CORS - Allow all origins in development
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Email - Console backend for development
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Email — use SMTP when EMAIL_HOST_USER is set in .env; otherwise console backend
+if config('EMAIL_HOST_USER', default=''):
+    EMAIL_BACKEND = config(
+        'EMAIL_BACKEND',
+        default='django.core.mail.backends.smtp.EmailBackend',
+    )
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Static files - Use default storage for development (no whitenoise compression)
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'

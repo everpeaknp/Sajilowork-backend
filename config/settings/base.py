@@ -395,13 +395,16 @@ PLATFORM_FEE_PERCENTAGE = 15
 
 # Frontend URL
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+APP_NAME = config('APP_NAME', default='Sajilowork')
 BACKEND_URL = config('BACKEND_URL', default='http://localhost:8000')
 
 # Social OAuth (Google / Facebook)
 GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
 GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET', default='')
+GOOGLE_OAUTH_REDIRECT_URI = config('GOOGLE_OAUTH_REDIRECT_URI', default='')
 FACEBOOK_APP_ID = config('FACEBOOK_APP_ID', default='')
 FACEBOOK_APP_SECRET = config('FACEBOOK_APP_SECRET', default='')
+FACEBOOK_OAUTH_REDIRECT_URI = config('FACEBOOK_OAUTH_REDIRECT_URI', default='')
 
 # Manual wallet recharge — admin WhatsApp (digits only, with country code e.g. 97798XXXXXXXX)
 RECHARGE_WHATSAPP_NUMBER = config('RECHARGE_WHATSAPP_NUMBER', default='')

@@ -25,6 +25,7 @@ urlpatterns = [
     
     # Email verification
     path('email/verify/', views.verify_email_view, name='verify_email'),
+    path('email/resend/', views.resend_verification_email_view, name='resend_verification_email'),
 
     # Social OAuth (browser redirect flow)
     path('google/login/', views.google_login_view, name='google_login'),

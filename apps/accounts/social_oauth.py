@@ -35,11 +35,31 @@ def _frontend_base() -> str:
     return getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
 
 
-def make_oauth_state(*, next_path: str, role: str, provider: str) -> str:
+def resolve_oauth_redirect_uri(provider: str, request=None) -> str:
+    """Return the OAuth callback URL sent to Google/Facebook (must match console config)."""
+    if provider == 'google':
+        explicit = getattr(settings, 'GOOGLE_OAUTH_REDIRECT_URI', '') or ''
+    else:
+        explicit = getattr(settings, 'FACEBOOK_OAUTH_REDIRECT_URI', '') or ''
+    if explicit:
+        return explicit if explicit.endswith('/') else f'{explicit}/'
+    if request is not None:
+        return request.build_absolute_uri(f'/api/v1/auth/{provider}/callback/')
+    return f'{_backend_base()}/api/v1/auth/{provider}/callback/'
+
+
+def make_oauth_state(
+    *,
+    next_path: str,
+    role: str,
+    provider: str,
+    redirect_uri: str,
+) -> str:
     payload = {
         'next': next_path or '/discover',
         'role': role if role in ('customer', 'tasker') else 'customer',
         'provider': provider,
+        'redirect_uri': redirect_uri,
         'nonce': secrets.token_urlsafe(8),
     }
     return signing.dumps(payload, salt=OAUTH_STATE_SALT)
@@ -157,12 +177,11 @@ def get_or_create_user_from_social(
 # --- Google ---
 
 
-def google_login_url(*, state: str) -> str:
+def google_login_url(*, state: str, redirect_uri: str) -> str:
     client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '') or ''
     if not client_id:
         raise OAuthConfigError('Google OAuth is not configured (GOOGLE_CLIENT_ID).')
 
-    redirect_uri = f'{_backend_base()}/api/v1/auth/google/callback/'
     params = {
         'client_id': client_id,
         'redirect_uri': redirect_uri,
@@ -175,13 +194,12 @@ def google_login_url(*, state: str) -> str:
     return 'https://accounts.google.com/o/oauth2/v2/auth?' + urllib.parse.urlencode(params)
 
 
-def exchange_google_code(code: str) -> dict[str, Any]:
+def exchange_google_code(code: str, *, redirect_uri: str) -> dict[str, Any]:
     client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '') or ''
     client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', '') or ''
     if not client_id or not client_secret:
         raise OAuthConfigError('Google OAuth is not configured.')
 
-    redirect_uri = f'{_backend_base()}/api/v1/auth/google/callback/'
     token_resp = requests.post(
         'https://oauth2.googleapis.com/token',
         data={
@@ -222,12 +240,11 @@ def login_with_google_profile(profile: dict[str, Any], *, role: str) -> User:
 # --- Facebook ---
 
 
-def facebook_login_url(*, state: str) -> str:
+def facebook_login_url(*, state: str, redirect_uri: str) -> str:
     app_id = getattr(settings, 'FACEBOOK_APP_ID', '') or ''
     if not app_id:
         raise OAuthConfigError('Facebook OAuth is not configured (FACEBOOK_APP_ID).')
 
-    redirect_uri = f'{_backend_base()}/api/v1/auth/facebook/callback/'
     params = {
         'client_id': app_id,
         'redirect_uri': redirect_uri,
@@ -238,13 +255,12 @@ def facebook_login_url(*, state: str) -> str:
     return 'https://www.facebook.com/v21.0/dialog/oauth?' + urllib.parse.urlencode(params)
 
 
-def exchange_facebook_code(code: str) -> dict[str, Any]:
+def exchange_facebook_code(code: str, *, redirect_uri: str) -> dict[str, Any]:
     app_id = getattr(settings, 'FACEBOOK_APP_ID', '') or ''
     app_secret = getattr(settings, 'FACEBOOK_APP_SECRET', '') or ''
     if not app_id or not app_secret:
         raise OAuthConfigError('Facebook OAuth is not configured.')
 
-    redirect_uri = f'{_backend_base()}/api/v1/auth/facebook/callback/'
     token_resp = requests.get(
         'https://graph.facebook.com/v21.0/oauth/access_token',
         params={

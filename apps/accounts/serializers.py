@@ -116,6 +116,11 @@ class EmailVerificationSerializer(serializers.Serializer):
     token = serializers.CharField(required=True)
 
 
+class ResendVerificationEmailSerializer(serializers.Serializer):
+    """Request another verification email."""
+    email = serializers.EmailField(required=True)
+
+
 class ChangePasswordSerializer(serializers.Serializer):
     """Serializer for changing password."""
     old_password = serializers.CharField(required=True, write_only=True)

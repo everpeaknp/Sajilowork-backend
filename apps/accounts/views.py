@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.shortcuts import redirect
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -24,6 +25,7 @@ from .serializers import (
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
     EmailVerificationSerializer,
+    ResendVerificationEmailSerializer,
     ChangePasswordSerializer,
     AuthTokensResponseSerializer,
     MessageResponseSerializer,
@@ -32,6 +34,7 @@ from .serializers import (
     TokenVerifyResponseSerializer,
 )
 from . import social_oauth
+from . import email_auth
 
 User = get_user_model()
 
@@ -181,29 +184,26 @@ def password_reset_request_view(request):
     """
     serializer = PasswordResetRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    
-    email = serializer.validated_data['email']
-    
-    try:
-        user = User.objects.get(email=email)
-        
-        # Generate password reset token
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        
-        # TODO: Send email with reset link
-        # For now, return token in response (development only)
-        reset_link = f"http://localhost:3000/reset-password?uid={uid}&token={token}"
-        
-        return Response({
-            'message': 'Password reset email sent.',
-            'reset_link': reset_link,  # Remove in production
-        })
-    except User.DoesNotExist:
-        # Don't reveal if email exists
-        return Response({
-            'message': 'If an account exists with this email, a password reset link has been sent.',
-        })
+
+    email = (serializer.validated_data['email'] or '').strip()
+    user = User.objects.filter(email__iexact=email).first()
+
+    reset_link = None
+    if user:
+        try:
+            reset_link = email_auth.send_password_reset_email(user)
+        except Exception:
+            if settings.DEBUG:
+                raise
+            # Do not reveal delivery failures to the client.
+
+    payload = {
+        'message': 'If an account exists with this email, a password reset link has been sent.',
+    }
+    if settings.DEBUG and reset_link:
+        payload['reset_link'] = reset_link
+
+    return Response(payload)
 
 
 @extend_schema(
@@ -235,7 +235,7 @@ def password_reset_confirm_view(request):
         user = User.objects.get(pk=user_id)
         
         # Verify token
-        if not default_token_generator.check_token(user, token):
+        if not email_auth.check_password_reset_token(user, token):
             return Response(
                 {'error': 'Invalid or expired token.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -269,38 +269,59 @@ def password_reset_confirm_view(request):
 @permission_classes([AllowAny])
 def verify_email_view(request):
     """
-    Verify user email with token.
+    Verify user email with signed token from the verification link.
     """
     serializer = EmailVerificationSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    
-    try:
-        uid = request.data.get('uid')
-        token = serializer.validated_data['token']
-        
-        # Decode user ID
-        user_id = force_str(urlsafe_base64_decode(uid))
-        user = User.objects.get(pk=user_id)
-        
-        # Verify token
-        if not default_token_generator.check_token(user, token):
-            return Response(
-                {'error': 'Invalid or expired token.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Mark email as verified
+
+    token = serializer.validated_data['token']
+    user_id, error = email_auth.verify_signed_email_token(token)
+    if error:
+        return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.filter(pk=user_id).first()
+    if not user:
+        return Response({'error': 'Invalid verification link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not user.email_verified:
         user.email_verified = True
         user.save(update_fields=['email_verified'])
-        
-        return Response({
-            'message': 'Email verified successfully.',
-        })
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-        return Response(
-            {'error': 'Invalid token.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+
+    return Response({'message': 'Email verified successfully.'})
+
+
+@extend_schema(
+    tags=['Authentication'],
+    auth=[],
+    summary='Resend verification email',
+    request=ResendVerificationEmailSerializer,
+    responses={200: MessageResponseSerializer},
+)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def resend_verification_email_view(request):
+    """Send another email verification link."""
+    serializer = ResendVerificationEmailSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    email = (serializer.validated_data['email'] or '').strip()
+    user = User.objects.filter(email__iexact=email).first()
+
+    verification_link = None
+    if user and not user.email_verified:
+        try:
+            verification_link = email_auth.send_email_verification_email(user)
+        except Exception:
+            if settings.DEBUG:
+                raise
+
+    payload = {
+        'message': 'If an account exists for that email, a verification link has been sent.',
+    }
+    if settings.DEBUG and verification_link:
+        payload['verification_link'] = verification_link
+
+    return Response(payload)
 
 
 @extend_schema(
@@ -372,15 +393,17 @@ def _oauth_login_redirect(provider: str, request):
     next_path = _safe_next_path(request.GET.get('next'))
     role = request.GET.get('role', 'customer')
     try:
+        redirect_uri = social_oauth.resolve_oauth_redirect_uri(provider, request)
         state = social_oauth.make_oauth_state(
             next_path=next_path,
             role=role,
             provider=provider,
+            redirect_uri=redirect_uri,
         )
         if provider == 'google':
-            url = social_oauth.google_login_url(state=state)
+            url = social_oauth.google_login_url(state=state, redirect_uri=redirect_uri)
         else:
-            url = social_oauth.facebook_login_url(state=state)
+            url = social_oauth.facebook_login_url(state=state, redirect_uri=redirect_uri)
         return redirect(url)
     except social_oauth.OAuthConfigError as exc:
         return redirect(
@@ -425,12 +448,15 @@ def _oauth_callback_redirect(provider: str, request):
             raise signing.BadSignature('Provider mismatch')
         next_path = _safe_next_path(state.get('next'))
         role = state.get('role', 'customer')
+        redirect_uri = state.get('redirect_uri') or social_oauth.resolve_oauth_redirect_uri(
+            provider, request
+        )
 
         if provider == 'google':
-            profile = social_oauth.exchange_google_code(code)
+            profile = social_oauth.exchange_google_code(code, redirect_uri=redirect_uri)
             user = social_oauth.login_with_google_profile(profile, role=role)
         else:
-            profile = social_oauth.exchange_facebook_code(code)
+            profile = social_oauth.exchange_facebook_code(code, redirect_uri=redirect_uri)
             user = social_oauth.login_with_facebook_profile(profile, role=role)
 
         access, refresh, _user_payload = social_oauth.issue_tokens_for_user(user)

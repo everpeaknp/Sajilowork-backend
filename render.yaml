@@ -52,4 +52,14 @@ services:
         sync: false
       - key: CLOUDINARY_DEFAULT_FOLDER
         value: Sajilowork
+      - key: FRONTEND_URL
+        sync: false
+      - key: BACKEND_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_OAUTH_REDIRECT_URI
+        sync: false
       # Add other required environment variables here (e.g. redis url for channels, email config, etc.)
