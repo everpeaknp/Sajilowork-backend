@@ -32,7 +32,11 @@ def _backend_base() -> str:
 
 
 def _frontend_base() -> str:
-    return getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+    configured = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+    # Guard against misconfigured production env still pointing at localhost.
+    if not getattr(settings, 'DEBUG', True) and 'localhost' in configured:
+        return 'https://www.sajilowork.com'
+    return configured
 
 
 def _allowed_frontend_origins() -> set[str]:

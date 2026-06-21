@@ -15,7 +15,10 @@ _signer = signing.TimestampSigner(salt=EMAIL_VERIFY_SALT)
 
 
 def frontend_url() -> str:
-    return getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+    configured = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+    if not getattr(settings, 'DEBUG', True) and 'localhost' in configured:
+        return 'https://www.sajilowork.com'
+    return configured
 
 
 def app_name() -> str:
