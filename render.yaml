@@ -62,4 +62,10 @@ services:
         sync: false
       - key: GOOGLE_OAUTH_REDIRECT_URI
         sync: false
-      # Add other required environment variables here (e.g. redis url for channels, email config, etc.)
+      # Render Dashboard → Environment (required for Google sign-in on production):
+      #   GOOGLE_CLIENT_ID=<new Web client ID from Google Cloud Console>
+      #   GOOGLE_CLIENT_SECRET=<matching client secret>
+      #   GOOGLE_OAUTH_REDIRECT_URI=https://sajiloworkbackend.everacy.com/api/v1/auth/google/callback/
+      #   BACKEND_URL=https://sajiloworkbackend.everacy.com
+      #   FRONTEND_URL=https://sajilowork.everacy.com
+      # Add the same redirect URI under Google Console → Credentials → Authorized redirect URIs.
