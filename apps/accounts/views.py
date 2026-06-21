@@ -402,6 +402,7 @@ def _safe_next_path(raw: str | None) -> str:
 def _oauth_login_redirect(provider: str, request):
     next_path = _safe_next_path(request.GET.get('next'))
     role = request.GET.get('role', 'customer')
+    frontend_base = social_oauth.resolve_frontend_origin(request=request)
     try:
         redirect_uri = social_oauth.resolve_oauth_redirect_uri(provider, request)
         state = social_oauth.make_oauth_state(
@@ -409,6 +410,7 @@ def _oauth_login_redirect(provider: str, request):
             role=role,
             provider=provider,
             redirect_uri=redirect_uri,
+            frontend_origin=frontend_base,
         )
         if provider == 'google':
             url = social_oauth.google_login_url(state=state, redirect_uri=redirect_uri)
@@ -420,6 +422,7 @@ def _oauth_login_redirect(provider: str, request):
             social_oauth.build_frontend_callback_url(
                 error='oauth_not_configured',
                 next_path=next_path,
+                frontend_base=frontend_base,
             )
         )
     except Exception:
@@ -427,18 +430,21 @@ def _oauth_login_redirect(provider: str, request):
             social_oauth.build_frontend_callback_url(
                 error='oauth_start_failed',
                 next_path=next_path,
+                frontend_base=frontend_base,
             )
         )
 
 
 def _oauth_callback_redirect(provider: str, request):
     next_path = '/discover'
+    frontend_base = social_oauth.resolve_frontend_origin(request=request)
     error_code = request.GET.get('error')
     if error_code:
         return redirect(
             social_oauth.build_frontend_callback_url(
                 error=error_code,
                 next_path=next_path,
+                frontend_base=frontend_base,
             )
         )
 
@@ -449,6 +455,7 @@ def _oauth_callback_redirect(provider: str, request):
             social_oauth.build_frontend_callback_url(
                 error='oauth_missing_code',
                 next_path=next_path,
+                frontend_base=frontend_base,
             )
         )
 
@@ -458,6 +465,7 @@ def _oauth_callback_redirect(provider: str, request):
             raise signing.BadSignature('Provider mismatch')
         next_path = _safe_next_path(state.get('next'))
         role = state.get('role', 'customer')
+        frontend_base = social_oauth.resolve_frontend_origin(state=state, request=request)
         redirect_uri = state.get('redirect_uri') or social_oauth.resolve_oauth_redirect_uri(
             provider, request
         )
@@ -475,6 +483,7 @@ def _oauth_callback_redirect(provider: str, request):
                 access=access,
                 refresh=refresh,
                 next_path=next_path,
+                frontend_base=frontend_base,
             )
         )
     except ValueError as exc:
@@ -486,13 +495,18 @@ def _oauth_callback_redirect(provider: str, request):
         else:
             err = 'oauth_failed'
         return redirect(
-            social_oauth.build_frontend_callback_url(error=err, next_path=next_path)
+            social_oauth.build_frontend_callback_url(
+                error=err,
+                next_path=next_path,
+                frontend_base=frontend_base,
+            )
         )
     except (signing.BadSignature, signing.SignatureExpired):
         return redirect(
             social_oauth.build_frontend_callback_url(
                 error='oauth_invalid_state',
                 next_path=next_path,
+                frontend_base=frontend_base,
             )
         )
     except Exception:
@@ -500,6 +514,7 @@ def _oauth_callback_redirect(provider: str, request):
             social_oauth.build_frontend_callback_url(
                 error='oauth_failed',
                 next_path=next_path,
+                frontend_base=frontend_base,
             )
         )
 

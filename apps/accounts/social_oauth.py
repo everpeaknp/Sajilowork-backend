@@ -35,6 +35,53 @@ def _frontend_base() -> str:
     return getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
 
 
+def _allowed_frontend_origins() -> set[str]:
+    origins: set[str] = set()
+    for key in ('CSRF_TRUSTED_ORIGINS', 'CORS_ALLOWED_ORIGINS'):
+        for value in getattr(settings, key, []) or []:
+            if value:
+                origins.add(str(value).rstrip('/'))
+    origins.add(_frontend_base())
+    return origins
+
+
+def validate_frontend_origin(raw: str | None) -> str:
+    """Return a trusted frontend origin or empty string."""
+    candidate = (raw or '').strip().rstrip('/')
+    if not candidate:
+        return ''
+    if candidate in _allowed_frontend_origins():
+        return candidate
+    return ''
+
+
+def resolve_frontend_origin(*, request=None, state: dict | None = None) -> str:
+    """Pick the frontend base URL for OAuth redirects back to the SPA."""
+    if state:
+        from_state = validate_frontend_origin(state.get('frontend_origin'))
+        if from_state:
+            return from_state
+
+    if request is not None:
+        from_query = validate_frontend_origin(request.GET.get('frontend_origin'))
+        if from_query:
+            return from_query
+
+        header_origin = (request.headers.get('Origin') or '').strip().rstrip('/')
+        if header_origin and validate_frontend_origin(header_origin):
+            return header_origin
+
+        referer = (request.headers.get('Referer') or '').strip()
+        if referer:
+            parsed = urllib.parse.urlparse(referer)
+            if parsed.scheme and parsed.netloc:
+                referer_origin = f'{parsed.scheme}://{parsed.netloc}'.rstrip('/')
+                if validate_frontend_origin(referer_origin):
+                    return referer_origin
+
+    return _frontend_base()
+
+
 def resolve_oauth_redirect_uri(provider: str, request=None) -> str:
     """Return the OAuth callback URL sent to Google/Facebook (must match console config)."""
     if provider == 'google':
@@ -54,12 +101,14 @@ def make_oauth_state(
     role: str,
     provider: str,
     redirect_uri: str,
+    frontend_origin: str = '',
 ) -> str:
     payload = {
         'next': next_path or '/discover',
         'role': role if role in ('customer', 'tasker') else 'customer',
         'provider': provider,
         'redirect_uri': redirect_uri,
+        'frontend_origin': frontend_origin,
         'nonce': secrets.token_urlsafe(8),
     }
     return signing.dumps(payload, salt=OAUTH_STATE_SALT)
@@ -117,6 +166,7 @@ def build_frontend_callback_url(
     refresh: str | None = None,
     next_path: str = '/discover',
     error: str | None = None,
+    frontend_base: str | None = None,
 ) -> str:
     params: dict[str, str] = {}
     if error:
@@ -127,7 +177,8 @@ def build_frontend_callback_url(
     if next_path:
         params['next'] = next_path
     query = urllib.parse.urlencode({k: v for k, v in params.items() if v})
-    return f'{_frontend_base()}/auth/callback?{query}'
+    base = (frontend_base or _frontend_base()).rstrip('/')
+    return f'{base}/auth/callback?{query}'
 
 
 def get_or_create_user_from_social(

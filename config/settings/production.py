@@ -56,3 +56,11 @@ if not config('REDIS_URL', default=''):
         }
     }
 
+# Production defaults — override localhost fallbacks from base when env vars are missing.
+FRONTEND_URL = config('FRONTEND_URL', default='https://www.sajilowork.com')
+BACKEND_URL = config('BACKEND_URL', default='https://sajiloworkbackend.everacy.com')
+GOOGLE_OAUTH_REDIRECT_URI = config(
+    'GOOGLE_OAUTH_REDIRECT_URI',
+    default='https://sajiloworkbackend.everacy.com/api/v1/auth/google/callback/',
+)
+
