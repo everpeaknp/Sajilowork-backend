@@ -41,4 +41,15 @@ services:
         value: "False"
       - key: ALLOWED_HOSTS
         value: "*"
+      # Cloudinary — set in Render Dashboard (Environment) for production uploads
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_UPLOAD_PRESET
+        sync: false
+      - key: CLOUDINARY_DEFAULT_FOLDER
+        value: Sajilowork
       # Add other required environment variables here (e.g. redis url for channels, email config, etc.)
