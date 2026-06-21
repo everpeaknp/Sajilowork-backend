@@ -147,7 +147,7 @@ class TaskSearchResultSerializer(TaskOwnerEmployerMixin, serializers.ModelSerial
             'owner_logo_url', 'owner_logo_text', 'owner_logo_color',
             'owner_business_name', 'owner_is_verified',
             'category', 'category_name', 'category_slug',
-            'bid_count', 'distance', 'created_at'
+            'bid_count', 'distance', 'created_at', 'requirements',
         ]
 
 
