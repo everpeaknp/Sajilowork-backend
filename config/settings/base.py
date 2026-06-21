@@ -27,7 +27,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
-    default='https://sajiloworkbackend.everacy.com,https://sajilowork.everacy.com,http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000',
+    default='https://sajiloworkbackend.everacy.com,https://sajilowork.everacy.com,https://sajilowork.com,https://www.sajilowork.com,http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000',
     cast=Csv()
 )
 
