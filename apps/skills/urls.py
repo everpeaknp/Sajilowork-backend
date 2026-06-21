@@ -1,13 +1,18 @@
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
 from .views import SkillViewSet
 
 app_name = 'skills'
 
-router = DefaultRouter()
-router.register(r'', SkillViewSet, basename='skill')
-
 urlpatterns = [
-    path('', include(router.urls)),
+    path(
+        '',
+        SkillViewSet.as_view({'get': 'list', 'post': 'create'}),
+        name='skill-list',
+    ),
+    path(
+        '<slug:slug>/',
+        SkillViewSet.as_view({'get': 'retrieve'}),
+        name='skill-detail',
+    ),
 ]
