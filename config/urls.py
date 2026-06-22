@@ -98,6 +98,7 @@ urlpatterns = [
     path('api/v1/analytics/', include('apps.analytics.urls')),
     path('api/v1/blog/', include('apps.blog.urls')),
     path('api/v1/faq/', FaqListAPIView.as_view(), name='api-faq-list'),
+    path('api/v1/site/', include('apps.site_branding.urls')),
     path('faq/', FaqListAPIView.as_view(), name='faq-list'),
 ]
 

@@ -95,6 +95,7 @@ LOCAL_APPS = [
     'apps.projects',
     'apps.jobs',
     'apps.bookmark',
+    'apps.site_branding',
     # 'apps.moderation',
     # 'apps.common',
 ]
@@ -505,6 +506,9 @@ JAZZMIN_SETTINGS = {
         "analytics.Metric": "fas fa-chart-bar",
         "blog.BlogPost": "fas fa-pen-nib",
         "auth": "fas fa-users-cog",
+        "sites": "fas fa-globe",
+        "sites.Site": "fas fa-globe",
+        "site_branding.SiteBranding": "fas fa-image",
         
         # Users app models
         "users.User": "fas fa-user",

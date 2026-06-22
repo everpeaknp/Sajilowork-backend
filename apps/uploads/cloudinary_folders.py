@@ -98,3 +98,7 @@ def cloudinary_users_documents_folder(user_id) -> str:
 
 def cloudinary_users_badges_folder(user_id) -> str:
     return cloudinary_folder('Users', str(user_id), 'Badges')
+
+
+def cloudinary_site_favicon_folder() -> str:
+    return cloudinary_folder('Site', 'Favicon')

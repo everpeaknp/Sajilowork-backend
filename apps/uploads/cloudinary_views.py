@@ -17,6 +17,7 @@ from .cloudinary_folders import (
     cloudinary_uploads_folder,
     cloudinary_users_covers_folder,
     cloudinary_users_profiles_folder,
+    cloudinary_site_favicon_folder,
     get_cloudinary_root,
     resolve_cloudinary_folder,
 )
@@ -61,6 +62,7 @@ class CloudinaryConfigView(APIView):
                     'jobs': cloudinary_jobs_folder(),
                     'uploads': cloudinary_uploads_folder(),
                     'chat': cloudinary_chat_folder(),
+                    'siteFavicon': cloudinary_site_favicon_folder(),
                 },
             }
         )
