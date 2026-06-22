@@ -334,10 +334,11 @@ class TaskListSerializer(TaskOwnerEmployerMixin, serializers.ModelSerializer):
             'category', 'category_name', 'listing_kind', 'tags', 'primary_image', 'owner', 'owner_name',
             'owner_username', 'owner_image', 'owner_logo_url', 'owner_logo_text', 'owner_logo_color',
             'owner_business_name', 'owner_rating', 'owner_is_verified', 'assigned_tasker', 'due_date',
-            'is_public', 'is_open', 'is_overdue', 'is_bookmarked', 'views_count', 'bids_count', 'created_at'
+            'is_public', 'is_open', 'is_overdue', 'is_bookmarked', 'views_count', 'bids_count', 'created_at',
+            'updated_at',
         ]
         read_only_fields = [
-            'id', 'slug', 'owner', 'views_count', 'bids_count', 'created_at'
+            'id', 'slug', 'owner', 'views_count', 'bids_count', 'created_at', 'updated_at'
         ]
 
 

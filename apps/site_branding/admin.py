@@ -4,7 +4,7 @@ from django.contrib.sites.admin import SiteAdmin as DjangoSiteAdmin
 from django.contrib.sites.models import Site
 from django.utils.html import format_html
 
-from apps.uploads.cloudinary_folders import cloudinary_site_favicon_folder
+from apps.uploads.cloudinary_folders import cloudinary_site_favicon_folder, cloudinary_site_og_folder
 from apps.uploads.cloudinary_utils import (
     cloudinary_server_upload_enabled,
     infer_cloudinary_resource_type,
@@ -15,24 +15,24 @@ from apps.uploads.cloudinary_utils import (
 from .models import SiteBranding
 
 
-def _upload_favicon_to_cloudinary(favicon_file) -> str:
+def _upload_image_to_cloudinary(uploaded_file, *, folder: str, field_label: str) -> str:
     try:
         result = upload_file_to_cloudinary(
-            favicon_file,
-            folder=cloudinary_site_favicon_folder(),
-            resource_type=infer_cloudinary_resource_type(favicon_file),
+            uploaded_file,
+            folder=folder,
+            resource_type=infer_cloudinary_resource_type(uploaded_file),
         )
     except Exception as exc:
         if is_cloudinary_permission_error(exc):
             raise forms.ValidationError(
-                'Cloudinary rejected the upload. Ensure your API key has upload '
+                f'Cloudinary rejected the {field_label} upload. Ensure your API key has upload '
                 'permission, or set CLOUDINARY_UPLOAD_PRESET.'
             ) from exc
-        raise forms.ValidationError(f'Favicon upload failed: {exc}') from exc
+        raise forms.ValidationError(f'{field_label} upload failed: {exc}') from exc
 
     url = result.get('secure_url') or result.get('url', '')
     if not url:
-        raise forms.ValidationError('Cloudinary upload succeeded but no URL was returned.')
+        raise forms.ValidationError(f'{field_label} upload succeeded but no URL was returned.')
     return url
 
 
@@ -42,9 +42,29 @@ class SiteAdminForm(forms.ModelForm):
         label='Site favicon',
         help_text='Upload PNG, ICO, or SVG (48×48 recommended). Stored on Cloudinary.',
     )
-    remove_favicon = forms.BooleanField(
+    remove_favicon = forms.BooleanField(required=False, label='Remove current favicon')
+    og_image = forms.FileField(
         required=False,
-        label='Remove current favicon',
+        label='Default OG image',
+        help_text='Upload PNG or JPG (1200×630 recommended) for social sharing previews.',
+    )
+    remove_og_image = forms.BooleanField(required=False, label='Remove current OG image')
+    meta_description = forms.CharField(
+        required=False,
+        label='Default meta description',
+        widget=forms.Textarea(attrs={'rows': 3, 'maxlength': 320}),
+        help_text='Used for homepage and as fallback SEO description (max 320 characters).',
+    )
+    twitter_handle = forms.CharField(
+        required=False,
+        max_length=50,
+        label='Twitter / X handle',
+        help_text='Without @, e.g. sajilowork',
+    )
+    contact_email = forms.EmailField(
+        required=False,
+        label='Public contact email',
+        help_text='Used in Organization schema and support metadata.',
     )
 
     class Meta:
@@ -61,95 +81,150 @@ class SiteAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance.pk:
-            branding = SiteBranding.objects.filter(site_id=self.instance.pk).first()
-            if branding and branding.favicon_url:
-                self.fields['favicon'].help_text = (
-                    'Choose a file to replace the current favicon on Cloudinary, '
-                    'or tick "Remove current favicon".'
-                )
+        if not self.instance.pk:
+            return
+        branding = SiteBranding.objects.filter(site_id=self.instance.pk).first()
+        if not branding:
+            return
+        self.fields['meta_description'].initial = branding.meta_description
+        self.fields['twitter_handle'].initial = branding.twitter_handle
+        self.fields['contact_email'].initial = branding.contact_email
 
     def clean(self):
         cleaned_data = super().clean()
-        favicon_file = cleaned_data.get('favicon')
-        if favicon_file and not cloudinary_server_upload_enabled():
-            self.add_error(
-                'favicon',
-                'Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, '
-                'CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in the environment.',
-            )
+        if not cloudinary_server_upload_enabled():
+            if cleaned_data.get('favicon'):
+                self.add_error(
+                    'favicon',
+                    'Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, '
+                    'CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.',
+                )
+            if cleaned_data.get('og_image'):
+                self.add_error('og_image', 'Cloudinary is not configured for image uploads.')
             return cleaned_data
 
+        favicon_file = cleaned_data.get('favicon')
         if favicon_file:
             try:
-                cleaned_data['favicon_url'] = _upload_favicon_to_cloudinary(favicon_file)
+                cleaned_data['favicon_url'] = _upload_image_to_cloudinary(
+                    favicon_file, folder=cloudinary_site_favicon_folder(), field_label='Favicon'
+                )
             except forms.ValidationError as exc:
                 self.add_error('favicon', exc)
+
+        og_image_file = cleaned_data.get('og_image')
+        if og_image_file:
+            try:
+                cleaned_data['og_image_url'] = _upload_image_to_cloudinary(
+                    og_image_file, folder=cloudinary_site_og_folder(), field_label='OG image'
+                )
+            except forms.ValidationError as exc:
+                self.add_error('og_image', exc)
+
         return cleaned_data
 
     def save(self, commit=True):
         site = super().save(commit=commit)
-        # Django admin saves with commit=False first; branding must update then too.
         if site.pk:
             self._save_branding(site)
         return site
 
     def _save_branding(self, site: Site) -> None:
         branding, _ = SiteBranding.objects.get_or_create(site=site)
-        remove_favicon = self.cleaned_data.get('remove_favicon')
-        favicon_url = self.cleaned_data.get('favicon_url')
+        update_fields: list[str] = []
 
-        if remove_favicon:
+        if self.cleaned_data.get('remove_favicon'):
             branding.favicon_url = ''
-            branding.save(update_fields=['favicon_url'])
-        elif favicon_url:
-            branding.favicon_url = favicon_url
-            branding.save(update_fields=['favicon_url'])
+            update_fields.append('favicon_url')
+        elif self.cleaned_data.get('favicon_url'):
+            branding.favicon_url = self.cleaned_data['favicon_url']
+            update_fields.append('favicon_url')
+
+        if self.cleaned_data.get('remove_og_image'):
+            branding.og_image_url = ''
+            update_fields.append('og_image_url')
+        elif self.cleaned_data.get('og_image_url'):
+            branding.og_image_url = self.cleaned_data['og_image_url']
+            update_fields.append('og_image_url')
+
+        for field in ('meta_description', 'twitter_handle', 'contact_email'):
+            if field in self.cleaned_data:
+                setattr(branding, field, self.cleaned_data.get(field) or '')
+                update_fields.append(field)
+
+        if update_fields:
+            branding.save(update_fields=list(dict.fromkeys(update_fields)))
 
 
 class SiteAdmin(DjangoSiteAdmin):
     form = SiteAdminForm
-    list_display = ('domain', 'name', 'has_favicon')
+    list_display = ('domain', 'name', 'has_favicon', 'has_og_image')
     search_fields = ('domain', 'name')
-    readonly_fields = ('favicon_preview',)
+    readonly_fields = ('favicon_preview', 'og_image_preview')
     fieldsets = (
         (
             'Site identity',
             {
+                'fields': ('name', 'domain'),
+                'description': 'Public site name and primary domain.',
+            },
+        ),
+        (
+            'Branding',
+            {
                 'fields': (
-                    'name',
-                    'domain',
                     'favicon_preview',
                     'favicon',
                     'remove_favicon',
+                    'og_image_preview',
+                    'og_image',
+                    'remove_og_image',
                 ),
-                'description': 'Set the public site name, domain, and favicon (uploaded to Cloudinary).',
+            },
+        ),
+        (
+            'SEO defaults',
+            {
+                'fields': ('meta_description', 'twitter_handle', 'contact_email'),
+                'description': 'Default metadata for search engines and social platforms.',
             },
         ),
     )
 
     @admin.display(description='Current favicon')
     def favicon_preview(self, obj):
+        return self._image_preview(obj, 'favicon_url', height=48)
+
+    @admin.display(description='Current OG image')
+    def og_image_preview(self, obj):
+        return self._image_preview(obj, 'og_image_url', height=80)
+
+    def _image_preview(self, obj, field: str, *, height: int):
         if not obj or not obj.pk:
-            return 'Save the site first, then upload a favicon.'
-
+            return 'Save the site first.'
         branding = SiteBranding.objects.filter(site_id=obj.pk).first()
-        if branding and branding.favicon_url:
+        url = getattr(branding, field, '') if branding else ''
+        if url:
             return format_html(
-                '<img src="{}" alt="Favicon preview" '
-                'style="height:48px;width:48px;object-fit:contain;border:1px solid #ddd;padding:4px;" />'
+                '<img src="{}" alt="Preview" style="height:{}px;max-width:240px;object-fit:contain;'
+                'border:1px solid #ddd;padding:4px;" />'
                 '<div style="margin-top:6px;"><a href="{}" target="_blank" rel="noopener">{}</a></div>',
-                branding.favicon_url,
-                branding.favicon_url,
-                branding.favicon_url,
+                url,
+                height,
+                url,
+                url,
             )
-
-        return 'No favicon uploaded yet.'
+        return 'Not uploaded yet.'
 
     @admin.display(boolean=True, description='Favicon')
     def has_favicon(self, obj):
         branding = getattr(obj, 'branding', None)
         return bool(branding and branding.favicon_url)
+
+    @admin.display(boolean=True, description='OG image')
+    def has_og_image(self, obj):
+        branding = getattr(obj, 'branding', None)
+        return bool(branding and branding.og_image_url)
 
 
 admin.site.unregister(Site)

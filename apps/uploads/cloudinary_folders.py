@@ -102,3 +102,7 @@ def cloudinary_users_badges_folder(user_id) -> str:
 
 def cloudinary_site_favicon_folder() -> str:
     return cloudinary_folder('Site', 'Favicon')
+
+
+def cloudinary_site_og_folder() -> str:
+    return cloudinary_folder('Site', 'OG')

@@ -27,4 +27,8 @@ def get_public_site_settings(site_id: int | None = None, request=None) -> dict:
         'site_name': site.name if site else 'Sajilowork',
         'site_domain': site.domain if site else '',
         'favicon_url': favicon_url,
+        'meta_description': (branding.meta_description or None) if branding else None,
+        'og_image_url': (branding.og_image_url or None) if branding else None,
+        'twitter_handle': (branding.twitter_handle or None) if branding else None,
+        'contact_email': (branding.contact_email or None) if branding else None,
     }
