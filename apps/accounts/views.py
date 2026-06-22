@@ -94,14 +94,21 @@ def login_view(request):
         )
 
     if not user.has_usable_password():
+        if user.google_id:
+            social_hint = 'Sign in with Google'
+        elif user.facebook_id:
+            social_hint = 'Sign in with Facebook'
+        else:
+            social_hint = 'Use Forgot password to set a password'
+
         return Response(
             {
                 'error': (
-                    'This account uses social sign-in. '
-                    'Continue with Google or use Forgot password to set a password.'
+                    f'This account does not have a password yet. {social_hint}, '
+                    'or use Forgot password to add one to this email.'
                 ),
             },
-            status=status.HTTP_401_UNAUTHORIZED
+            status=status.HTTP_401_UNAUTHORIZED,
         )
 
     if not user.check_password(password):

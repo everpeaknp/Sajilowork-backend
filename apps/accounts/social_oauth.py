@@ -185,6 +185,51 @@ def build_frontend_callback_url(
     return f'{base}/auth/callback?{query}'
 
 
+def _social_provider_field(provider: str) -> str:
+    if provider == 'google':
+        return 'google_id'
+    if provider == 'facebook':
+        return 'facebook_id'
+    raise ValueError(f'Unsupported provider: {provider}')
+
+
+def _is_placeholder_social_email(email: str) -> bool:
+    return (email or '').endswith('@social.tasknepal.local')
+
+
+def _link_provider_to_user(user: User, *, provider: str, provider_user_id: str) -> User:
+    """Attach a social provider id to an existing user account."""
+    provider_field = _social_provider_field(provider)
+    provider_user_id = str(provider_user_id).strip()
+    if not provider_user_id:
+        raise ValueError('Provider user id is required.')
+
+    current_id = getattr(user, provider_field)
+    if current_id and current_id != provider_user_id:
+        raise ValueError('This email is already linked to a different social account.')
+
+    update_fields: list[str] = []
+    if not current_id:
+        User.objects.filter(**{provider_field: provider_user_id}).exclude(pk=user.pk).update(
+            **{provider_field: None}
+        )
+        setattr(user, provider_field, provider_user_id)
+        update_fields.append(provider_field)
+    if provider == 'google' and not user.email_verified:
+        user.email_verified = True
+        update_fields.append('email_verified')
+    if update_fields:
+        user.save(update_fields=update_fields)
+    return user
+
+
+def _detach_provider_from_user(user: User, *, provider: str) -> None:
+    provider_field = _social_provider_field(provider)
+    if getattr(user, provider_field):
+        setattr(user, provider_field, None)
+        user.save(update_fields=[provider_field])
+
+
 def get_or_create_user_from_social(
     *,
     provider: str,
@@ -194,22 +239,50 @@ def get_or_create_user_from_social(
     last_name: str = '',
     role: str = 'customer',
 ) -> User:
-    provider_field = 'google_id' if provider == 'google' else 'facebook_id'
-    lookup = {provider_field: provider_user_id}
-    user = User.objects.filter(**lookup).first()
-    if user:
-        return user
+    provider_field = _social_provider_field(provider)
+    provider_user_id = str(provider_user_id or '').strip()
+    if not provider_user_id:
+        raise ValueError('Provider user id is required.')
 
     normalized_email = (email or '').strip().lower()
-    if normalized_email:
-        existing = User.objects.filter(email__iexact=normalized_email).first()
-        if existing:
-            if not getattr(existing, provider_field):
-                setattr(existing, provider_field, provider_user_id)
-                if not existing.email_verified and provider == 'google':
-                    existing.email_verified = True
-                existing.save(update_fields=[provider_field, 'email_verified'])
-            return existing
+
+    user_by_provider = User.objects.filter(**{provider_field: provider_user_id}).first()
+    user_by_email = (
+        User.objects.filter(email__iexact=normalized_email).first()
+        if normalized_email
+        else None
+    )
+
+    # Same email account and provider account are different rows — link to the email account.
+    if user_by_provider and user_by_email and user_by_provider.pk != user_by_email.pk:
+        canonical = user_by_email
+        _detach_provider_from_user(user_by_provider, provider=provider)
+        _link_provider_to_user(canonical, provider=provider, provider_user_id=provider_user_id)
+        return canonical
+
+    # Existing registered user with this email — link provider instead of creating a new user.
+    if user_by_email:
+        return _link_provider_to_user(
+            user_by_email,
+            provider=provider,
+            provider_user_id=provider_user_id,
+        )
+
+    if user_by_provider:
+        user = user_by_provider
+        if normalized_email and (
+            _is_placeholder_social_email(user.email)
+            or user.email.lower() != normalized_email
+        ):
+            conflict = User.objects.filter(email__iexact=normalized_email).exclude(pk=user.pk).first()
+            if conflict:
+                _detach_provider_from_user(user, provider=provider)
+                _link_provider_to_user(conflict, provider=provider, provider_user_id=provider_user_id)
+                return conflict
+            user.email = normalized_email
+            user.email_verified = True
+            user.save(update_fields=['email', 'email_verified'])
+        return user
 
     if not normalized_email:
         normalized_email = f'{provider}_{provider_user_id}@social.tasknepal.local'
