@@ -43,6 +43,9 @@ class SiteBrandingTests(TestCase):
         self.assertEqual(settings['site_name'], 'Sajilowork')
         self.assertEqual(resolve_public_site_name('example.com'), 'Sajilowork')
         self.assertEqual(settings['site_domain'], 'www.sajilowork.com')
+        self.assertTrue(settings['meta_description'])
+        self.assertTrue(settings['og_image_url'])
+        self.assertEqual(settings['same_as'], [])
 
     @override_settings(**CLOUDINARY_TEST_SETTINGS)
     def test_admin_form_save_with_commit_false_uploads_favicon(self):

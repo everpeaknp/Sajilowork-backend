@@ -38,6 +38,21 @@ class SiteBranding(models.Model):
         default='',
         help_text=_('Public support email for Organization schema and contact pages.'),
     )
+    facebook_url = models.URLField(
+        blank=True,
+        default='',
+        help_text=_('Facebook page URL for Organization sameAs schema.'),
+    )
+    linkedin_url = models.URLField(
+        blank=True,
+        default='',
+        help_text=_('LinkedIn company/profile URL for Organization sameAs schema.'),
+    )
+    instagram_url = models.URLField(
+        blank=True,
+        default='',
+        help_text=_('Instagram profile URL for Organization sameAs schema.'),
+    )
 
     class Meta:
         verbose_name = _('Site branding')

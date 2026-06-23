@@ -66,6 +66,9 @@ class SiteAdminForm(forms.ModelForm):
         label='Public contact email',
         help_text='Used in Organization schema and support metadata.',
     )
+    facebook_url = forms.URLField(required=False, label='Facebook URL')
+    linkedin_url = forms.URLField(required=False, label='LinkedIn URL')
+    instagram_url = forms.URLField(required=False, label='Instagram URL')
 
     class Meta:
         model = Site
@@ -89,6 +92,9 @@ class SiteAdminForm(forms.ModelForm):
         self.fields['meta_description'].initial = branding.meta_description
         self.fields['twitter_handle'].initial = branding.twitter_handle
         self.fields['contact_email'].initial = branding.contact_email
+        self.fields['facebook_url'].initial = branding.facebook_url
+        self.fields['linkedin_url'].initial = branding.linkedin_url
+        self.fields['instagram_url'].initial = branding.instagram_url
 
     def clean(self):
         cleaned_data = super().clean()
@@ -147,7 +153,14 @@ class SiteAdminForm(forms.ModelForm):
             branding.og_image_url = self.cleaned_data['og_image_url']
             update_fields.append('og_image_url')
 
-        for field in ('meta_description', 'twitter_handle', 'contact_email'):
+        for field in (
+            'meta_description',
+            'twitter_handle',
+            'contact_email',
+            'facebook_url',
+            'linkedin_url',
+            'instagram_url',
+        ):
             if field in self.cleaned_data:
                 setattr(branding, field, self.cleaned_data.get(field) or '')
                 update_fields.append(field)
@@ -185,7 +198,14 @@ class SiteAdmin(DjangoSiteAdmin):
         (
             'SEO defaults',
             {
-                'fields': ('meta_description', 'twitter_handle', 'contact_email'),
+                'fields': (
+                    'meta_description',
+                    'twitter_handle',
+                    'contact_email',
+                    'facebook_url',
+                    'linkedin_url',
+                    'instagram_url',
+                ),
                 'description': 'Default metadata for search engines and social platforms.',
             },
         ),

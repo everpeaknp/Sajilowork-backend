@@ -10,6 +10,29 @@ PLACEHOLDER_SITE_DOMAINS = frozenset(
 
 PLACEHOLDER_SITE_NAMES = frozenset({'example.com', 'example', 'localhost'})
 
+DEFAULT_META_DESCRIPTION = (
+    'Hire skilled taskers and freelancers in Nepal. Post tasks, find jobs, '
+    'book local services, and get work done securely on Sajilowork.'
+)
+
+
+def _default_og_image_url() -> str:
+    frontend = getattr(settings, 'FRONTEND_URL', 'https://www.sajilowork.com').rstrip('/')
+    if not frontend.startswith('http'):
+        frontend = f'https://{frontend}'
+    return f'{frontend}/opengraph-image'
+
+
+def _social_urls_from_branding(branding: SiteBranding | None) -> list[str]:
+    if not branding:
+        return []
+    urls = []
+    for field in ('facebook_url', 'linkedin_url', 'instagram_url'):
+        value = (getattr(branding, field, '') or '').strip()
+        if value:
+            urls.append(value)
+    return urls
+
 
 def resolve_public_site_name(raw_name: str | None) -> str:
     """Return a real site name, not Django's default example.com placeholder."""
@@ -66,13 +89,16 @@ def get_public_site_settings(site_id: int | None = None, request=None) -> dict:
     branding = get_site_branding(site_id)
 
     favicon_url = (branding.favicon_url or None) if branding else None
+    meta_description = ((branding.meta_description or '').strip() if branding else '') or DEFAULT_META_DESCRIPTION
+    og_image_url = ((branding.og_image_url or '').strip() if branding else '') or _default_og_image_url()
 
     return {
         'site_name': resolve_public_site_name(site.name if site else ''),
         'site_domain': resolve_public_site_domain(site.domain if site else ''),
         'favicon_url': favicon_url,
-        'meta_description': (branding.meta_description or None) if branding else None,
-        'og_image_url': (branding.og_image_url or None) if branding else None,
+        'meta_description': meta_description,
+        'og_image_url': og_image_url,
         'twitter_handle': (branding.twitter_handle or None) if branding else None,
         'contact_email': (branding.contact_email or None) if branding else None,
+        'same_as': _social_urls_from_branding(branding),
     }
