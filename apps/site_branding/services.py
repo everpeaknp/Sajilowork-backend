@@ -8,6 +8,20 @@ PLACEHOLDER_SITE_DOMAINS = frozenset(
 )
 
 
+PLACEHOLDER_SITE_NAMES = frozenset({'example.com', 'example', 'localhost'})
+
+
+def resolve_public_site_name(raw_name: str | None) -> str:
+    """Return a real site name, not Django's default example.com placeholder."""
+    name = (raw_name or '').strip()
+    if not name:
+        return 'Sajilowork'
+    lowered = name.lower()
+    if lowered in PLACEHOLDER_SITE_NAMES or lowered.startswith('localhost'):
+        return 'Sajilowork'
+    return name
+
+
 def resolve_public_site_domain(raw_domain: str | None) -> str:
     """Return a real public hostname, not Django's default example.com placeholder."""
     domain = (raw_domain or '').strip().lower()
@@ -20,8 +34,13 @@ def resolve_public_site_domain(raw_domain: str | None) -> str:
         or domain.startswith('127.0.0.1')
     ):
         frontend = getattr(settings, 'FRONTEND_URL', '').rstrip('/')
-        frontend_host = frontend.replace('https://', '').replace('http://', '').strip('/')
-        if frontend_host and frontend_host not in PLACEHOLDER_SITE_DOMAINS:
+        frontend_host = frontend.replace('https://', '').replace('http://', '').strip('/').lower()
+        if (
+            frontend_host
+            and frontend_host not in PLACEHOLDER_SITE_DOMAINS
+            and not frontend_host.startswith('localhost')
+            and not frontend_host.startswith('127.0.0.1')
+        ):
             return frontend_host
         return 'www.sajilowork.com'
 
@@ -49,7 +68,7 @@ def get_public_site_settings(site_id: int | None = None, request=None) -> dict:
     favicon_url = (branding.favicon_url or None) if branding else None
 
     return {
-        'site_name': site.name if site else 'Sajilowork',
+        'site_name': resolve_public_site_name(site.name if site else ''),
         'site_domain': resolve_public_site_domain(site.domain if site else ''),
         'favicon_url': favicon_url,
         'meta_description': (branding.meta_description or None) if branding else None,

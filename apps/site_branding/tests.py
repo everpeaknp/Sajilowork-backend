@@ -7,7 +7,7 @@ from rest_framework.test import APIClient
 
 from apps.site_branding.admin import SiteAdminForm
 from apps.site_branding.models import SiteBranding
-from apps.site_branding.services import get_public_site_settings
+from apps.site_branding.services import get_public_site_settings, resolve_public_site_name
 
 CLOUDINARY_TEST_SETTINGS = {
     'CLOUDINARY_STORAGE': {
@@ -32,6 +32,17 @@ class SiteBrandingTests(TestCase):
         self.assertEqual(settings['site_name'], 'Sajilowork')
         self.assertIsNone(settings['favicon_url'])
         self.assertTrue(SiteBranding.objects.filter(site=site).exists())
+
+    def test_placeholder_site_name_resolves_to_sajilowork(self):
+        site = Site.objects.get_current()
+        site.name = 'example.com'
+        site.domain = 'localhost:3000'
+        site.save()
+
+        settings = get_public_site_settings(site.pk)
+        self.assertEqual(settings['site_name'], 'Sajilowork')
+        self.assertEqual(resolve_public_site_name('example.com'), 'Sajilowork')
+        self.assertEqual(settings['site_domain'], 'www.sajilowork.com')
 
     @override_settings(**CLOUDINARY_TEST_SETTINGS)
     def test_admin_form_save_with_commit_false_uploads_favicon(self):
