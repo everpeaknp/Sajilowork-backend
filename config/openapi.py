@@ -9,7 +9,7 @@ def load_api_description() -> str:
     path = BASE_DIR / 'docs' / 'openapi_description.md'
     if path.is_file():
         return path.read_text(encoding='utf-8')
-    return 'tasknepal marketplace REST API'
+    return 'SajiloWork marketplace REST API'
 
 
 API_TAGS = [

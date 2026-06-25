@@ -309,12 +309,12 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 from config.openapi import API_TAGS, load_api_description
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'tasknepal API',
+    'TITLE': 'SajiloWork API',
     'DESCRIPTION': load_api_description(),
     'VERSION': '1.0.0',
     'CONTACT': {
-        'name': 'tasknepal Engineering',
-        'email': 'support@tasknepal.com',
+        'name': 'SajiloWork Engineering',
+        'email': 'support@sajilowork.com',
     },
     'LICENSE': {'name': 'Proprietary'},
     'SERVE_INCLUDE_SCHEMA': False,
@@ -343,7 +343,7 @@ SPECTACULAR_SETTINGS = {
         'operationsSorter': 'alpha',
         'tagsSorter': 'alpha',
         # Static asset served by Django staticfiles.
-        'customCssUrl': '/static/swagger-ui/tasknepal.css',
+        'customCssUrl': '/static/swagger-ui/sajilowork.css',
     },
     'REDOC_UI_SETTINGS': {
         'hideDownloadButton': False,

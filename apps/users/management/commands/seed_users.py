@@ -73,7 +73,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--password',
             type=str,
-            default='tasknepal123',
+            default='sajilowork123',
             help='Password for all seeded users',
         )
         parser.add_argument(
@@ -126,7 +126,7 @@ class Command(BaseCommand):
         self.stdout.write(f'  Password: {password}')
         self.stdout.write(f'  Admin:    {"yes" if primary.is_superuser else "no"}')
         self.stdout.write('')
-        self.stdout.write('Random users use the same password and emails like user001@tasknepal.dev')
+        self.stdout.write('Random users use the same password and emails like user001@sajilowork.dev')
         self.stdout.write('View users at http://localhost:8000/admin/users/user/')
 
     def _upsert_primary_user(
@@ -159,8 +159,8 @@ class Command(BaseCommand):
         user.city = user.city or 'Kathmandu'
         user.state = user.state or 'Bagmati'
         user.country = user.country or 'Nepal'
-        user.tagline = user.tagline or 'TaskNepal platform admin and employer'
-        user.bio = user.bio or 'Primary development account for TaskNepal marketplace.'
+        user.tagline = user.tagline or 'SajiloWork platform admin and employer'
+        user.bio = user.bio or 'Primary development account for SajiloWork marketplace.'
         user.wallet_balance = user.wallet_balance or Decimal('5000.00')
 
         if make_superuser:
@@ -179,7 +179,7 @@ class Command(BaseCommand):
     def _create_random_user(self, index: int, password: str) -> tuple[User, bool]:
         first_name = random.choice(FIRST_NAMES)
         last_name = random.choice(LAST_NAMES)
-        email = f'user{index + 1:03d}@tasknepal.dev'
+        email = f'user{index + 1:03d}@sajilowork.dev'
         role = random.choice(['customer', 'tasker', 'tasker', 'customer'])
         city, state, country = random.choice(CITIES)
 

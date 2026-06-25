@@ -63,9 +63,9 @@ urlpatterns = [
     # This simply reuses the same OpenAPI schema, but lets you apply a
     # custom favicon / title / CSS if desired.
     path(
-        'api/docs/tasknepal/',
+        'api/docs/sajilowork/',
         SpectacularSwaggerView.as_view(url_name='schema'),
-        name='swagger-ui-tasknepal',
+        name='swagger-ui-sajilowork',
     ),
     # Read‑only, text‑focused reference.
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),

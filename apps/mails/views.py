@@ -267,9 +267,9 @@ class SMTPConfigurationView(APIView):
         success, message = SMTPManager.send_email(
             smtp_config=smtp_config,
             to_email=test_email,
-            subject='Test Email from Airtasker Email System',
-            html_content='<h1>Test Email</h1><p>This is a test email from the Airtasker Email Management System.</p>',
-            text_content='Test Email\n\nThis is a test email from the Airtasker Email Management System.'
+            subject='Test Email from SajiloWork Email System',
+            html_content='<h1>Test Email</h1><p>This is a test email from the SajiloWork Email Management System.</p>',
+            text_content='Test Email\n\nThis is a test email from the SajiloWork Email Management System.'
         )
         
         return Response({
@@ -332,9 +332,9 @@ class SMTPSendTestView(APIView):
         success, message = SMTPManager.send_email(
             smtp_config=smtp_config,
             to_email=test_email,
-            subject='Test Email from Airtasker Email System',
-            html_content='<h1>Test Email</h1><p>This is a test email from the Airtasker Email Management System.</p>',
-            text_content='Test Email\n\nThis is a test email from the Airtasker Email Management System.'
+            subject='Test Email from SajiloWork Email System',
+            html_content='<h1>Test Email</h1><p>This is a test email from the SajiloWork Email Management System.</p>',
+            text_content='Test Email\n\nThis is a test email from the SajiloWork Email Management System.'
         )
         
         return Response({
