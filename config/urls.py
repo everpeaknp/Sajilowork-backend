@@ -99,6 +99,10 @@ urlpatterns = [
     path('api/v1/blog/', include('apps.blog.urls')),
     path('api/v1/faq/', FaqListAPIView.as_view(), name='api-faq-list'),
     path('api/v1/site/', include('apps.site_branding.urls')),
+    
+    # Admin-only endpoints
+    path('api/admin/mails/', include('apps.mails.urls')),  # Email Management System
+    
     path('faq/', FaqListAPIView.as_view(), name='faq-list'),
 ]
 

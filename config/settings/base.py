@@ -76,6 +76,7 @@ LOCAL_APPS = [
     'apps.reviews',
     'apps.chat',
     'apps.notifications',
+    'apps.mails',  # Enterprise Email Management System
     'apps.payments',
     'apps.fees',
     'apps.rules',
