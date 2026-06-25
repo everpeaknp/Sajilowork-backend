@@ -1,11 +1,11 @@
 openapi: 3.0.3
 info:
-  title: tasknepal API
+  title: sajilowork API
   version: 1.0.0
-  description: tasknepal marketplace REST API
+  description: sajilowork marketplace REST API
   contact:
-    name: tasknepal Engineering
-    email: support@tasknepal.com
+    name: sajilowork Engineering
+    email: support@sajilowork.com
   license:
     name: Proprietary
 paths:

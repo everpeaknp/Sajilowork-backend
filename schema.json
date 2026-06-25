@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: tasknepal API
+  title: sajilowork API
   version: 1.0.0
-  description: "# tasknepal REST API\n\nMarketplace API for **web** (Next.js), **mobile**\
+  description: "# sajilowork REST API\n\nMarketplace API for **web** (Next.js), **mobile**\
     \ (iOS/Android), and admin tools.\n\nAll business routes are under **`/api/v1/`**.\
     \ Currency is **NPR** unless noted otherwise.\n\n---\n\n## Base URLs\n\n| Environment\
     \ | Base URL |\n|-------------|----------|\n| Local | `http://localhost:8000/api/v1`\
@@ -105,8 +105,8 @@ info:
     \ contact your team lead or check the repository `backend/apps/*/urls.py` for\
     \ route sources  \n"
   contact:
-    name: tasknepal Engineering
-    email: support@tasknepal.com
+    name: sajilowork Engineering
+    email: support@sajilowork.com
   license:
     name: Proprietary
 paths: {}

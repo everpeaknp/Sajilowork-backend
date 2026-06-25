@@ -19,7 +19,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
 
-OAUTH_STATE_SALT = 'tasknepal-oauth-state'
+OAUTH_STATE_SALT = 'sajilowork-oauth-state'
 OAUTH_STATE_MAX_AGE = 600  # 10 minutes
 
 
@@ -194,7 +194,7 @@ def _social_provider_field(provider: str) -> str:
 
 
 def _is_placeholder_social_email(email: str) -> bool:
-    return (email or '').endswith('@social.tasknepal.local')
+    return (email or '').endswith('@social.sajilowork.local')
 
 
 def _link_provider_to_user(user: User, *, provider: str, provider_user_id: str) -> User:
@@ -285,7 +285,7 @@ def get_or_create_user_from_social(
         return user
 
     if not normalized_email:
-        normalized_email = f'{provider}_{provider_user_id}@social.tasknepal.local'
+        normalized_email = f'{provider}_{provider_user_id}@social.sajilowork.local'
 
     username_base = normalized_email.split('@')[0]
     user = User(

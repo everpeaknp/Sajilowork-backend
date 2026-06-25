@@ -22,7 +22,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
-USER_AGENT = "tasknepal/1.0 (geocoding for task listings)"
+USER_AGENT = "sajilowork/1.0 (geocoding for task listings)"
 REQUEST_TIMEOUT = 6  # seconds
 
 

@@ -37,7 +37,7 @@ SERVICES_FAQ = [
 GENERAL_FAQ = [
     (
         'How much does it cost to post a task?',
-        'Posting a task on tasknepal is free. You only pay when you accept an offer and funds are held securely until the work is completed to your satisfaction.',
+        'Posting a task on sajilowork is free. You only pay when you accept an offer and funds are held securely until the work is completed to your satisfaction.',
         1,
     ),
     (
@@ -67,7 +67,7 @@ GENERAL_FAQ = [
     ),
     (
         'Can I communicate off the platform?',
-        'We recommend keeping all task communication on tasknepal so support can help if there is a dispute or payment issue.',
+        'We recommend keeping all task communication on sajilowork so support can help if there is a dispute or payment issue.',
         7,
     ),
     (

@@ -174,7 +174,7 @@ class DashboardService:
                 host = urlparse(ref).netloc.lower()
             except ValueError:
                 host = ''
-            internal_markers = ('localhost', '127.0.0.1', 'tasknepal')
+            internal_markers = ('localhost', '127.0.0.1', 'sajilowork')
             if host and not any(marker in host for marker in internal_markers):
                 return 'referral'
 

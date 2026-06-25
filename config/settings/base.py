@@ -417,18 +417,18 @@ SMS_GATEWAY_URL = config('SMS_GATEWAY_URL', default='')
 SMS_GATEWAY_TOKEN = config('SMS_GATEWAY_TOKEN', default='')
 
 # Grappelli Admin Theme Configuration
-GRAPPELLI_ADMIN_TITLE = "tasknepal Administration"
+GRAPPELLI_ADMIN_TITLE = "SajiloWork Administration"
 # Jazzmin Admin Theme Configuration
 JAZZMIN_SETTINGS = {
     # Site branding
-    "site_title": "tasknepal Admin",
-    "site_header": "tasknepal Administration",
-    "site_brand": "tasknepal",
+    "site_title": "SajiloWork Admin",
+    "site_header": "SajiloWork Administration",
+    "site_brand": "SajiloWork",
     "site_logo": None,
     "site_logo_classes": "img-circle",
     "site_icon": None,
-    "welcome_sign": "Welcome to tasknepal Admin Panel",
-    "copyright": "tasknepal © 2024",
+    "welcome_sign": "Welcome to SajiloWork Admin Panel",
+    "copyright": "SajiloWork © 2024",
     
     # Search model in admin
     "search_model": ["users.User", "tasks.Task", "services.Service", "bids.Bid"],

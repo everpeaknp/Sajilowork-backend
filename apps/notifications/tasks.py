@@ -47,7 +47,7 @@ def send_email_notification(self, notification_id: str):
         
         subject = subject_templates.get(
             notification.notification_type,
-            'TaskNepal Notification'
+            'SajiloWork Notification'
         )
         
         # Create email content
@@ -67,18 +67,18 @@ def send_email_notification(self, notification_id: str):
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>TaskNepal</h1>
+                    <h1>SajiloWork</h1>
                 </div>
                 <div class="content">
                     <h2>{notification.title}</h2>
                     <p>{notification.message}</p>
                     <p style="margin-top: 20px;">
-                        <a href="{settings.FRONTEND_URL}" class="button">View on TaskNepal</a>
+                        <a href="{settings.FRONTEND_URL}" class="button">View on SajiloWork</a>
                     </p>
                 </div>
                 <div class="footer">
-                    <p>This is an automated email from TaskNepal. Please do not reply.</p>
-                    <p>&copy; 2024 TaskNepal. All rights reserved.</p>
+                    <p>This is an automated email from SajiloWork. Please do not reply.</p>
+                    <p>&copy; 2024 SajiloWork. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -129,7 +129,7 @@ def send_sms_notification(self, notification_id: str):
             return {'success': False, 'error': 'No phone number'}
         
         # SMS message (max 160 characters)
-        sms_message = f"TaskNepal: {notification.title}. {notification.message[:100]}"
+        sms_message = f"SajiloWork: {notification.title}. {notification.message[:100]}"
         
         # Nepal SMS Gateway Configuration
         # Popular options: Sparrow SMS, Aakash SMS, SMS Nepal
@@ -145,7 +145,7 @@ def send_sms_notification(self, notification_id: str):
             sms_api_url,
             json={
                 'token': sms_api_token,
-                'from': 'TaskNepal',
+                'from': 'SajiloWork',
                 'to': str(user.phone_number),
                 'text': sms_message
             },
@@ -285,11 +285,11 @@ def send_welcome_email(self, user_id: str):
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Welcome to TaskNepal!</h1>
+                    <h1>Welcome to SajiloWork!</h1>
                 </div>
                 <div class="content">
                     <h2>Hi {user.first_name},</h2>
-                    <p>Welcome to TaskNepal - Nepal's premier marketplace for getting things done!</p>
+                    <p>Welcome to SajiloWork - Nepal's premier marketplace for getting things done!</p>
                     <p>Whether you're looking to:</p>
                     <ul>
                         <li><strong>Post a task</strong> and get help from skilled taskers</li>
@@ -306,7 +306,7 @@ def send_welcome_email(self, user_id: str):
                     </p>
                 </div>
                 <div class="footer">
-                    <p>&copy; 2024 TaskNepal. All rights reserved.</p>
+                    <p>&copy; 2024 SajiloWork. All rights reserved.</p>
                     <p>Kathmandu, Nepal</p>
                 </div>
             </div>
@@ -317,7 +317,7 @@ def send_welcome_email(self, user_id: str):
         plain_message = strip_tags(html_message)
         
         send_mail(
-            subject='Welcome to TaskNepal!',
+            subject='Welcome to SajiloWork!',
             message=plain_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],

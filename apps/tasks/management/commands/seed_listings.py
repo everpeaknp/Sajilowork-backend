@@ -32,7 +32,7 @@ from apps.users.models import EmployerProfile, UserSkill
 User = get_user_model()
 
 DEFAULT_EMAILS = ('bishal@baniya.com', 'userc@userc.userc')
-DEFAULT_PASSWORD = 'tasknepal123'
+DEFAULT_PASSWORD = 'sajilowork123'
 
 NEPAL_LOCATIONS = [
     ('Kathmandu', 'Bagmati', Decimal('27.717200'), Decimal('85.324000')),
@@ -447,7 +447,7 @@ class Command(BaseCommand):
         user.state = user.state or 'Bagmati'
         user.country = user.country or 'Nepal'
         user.tagline = user.tagline or (
-            'Employer & product owner at TaskNepal' if is_bishal else 'Full-stack freelancer & designer'
+            'Employer & product owner at SajiloWork' if is_bishal else 'Full-stack freelancer & designer'
         )
         user.bio = user.bio or (
             'Posting jobs, projects, and local tasks across Nepal.'

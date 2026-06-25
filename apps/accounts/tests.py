@@ -37,7 +37,7 @@ class SocialAccountLinkingTests(TestCase):
             password='SecurePass123!',
         )
         placeholder = User.objects.create(
-            email='google_google-999@social.tasknepal.local',
+            email='google_google-999@social.sajilowork.local',
             username='google999',
             google_id='google-999',
         )

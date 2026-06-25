@@ -170,7 +170,7 @@ class Command(BaseCommand):
 
         user.save()
 
-        self._ensure_employer_profile(user, company_name='TaskNepal', industry='Technology')
+        self._ensure_employer_profile(user, company_name='SajiloWork', industry='Technology')
         self.stdout.write(
             self.style.SUCCESS(f'  {"Created" if was_created else "Updated"} primary user: {email}')
         )

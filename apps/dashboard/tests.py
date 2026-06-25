@@ -150,7 +150,7 @@ class DashboardAPITestCase(TestCase):
         )
         TaskView.objects.create(
             task=task,
-            referrer='https://www.google.com/search?q=tasknepal',
+            referrer='https://www.google.com/search?q=sajilowork',
             user_agent='Mozilla/5.0',
         )
         TaskView.objects.create(
