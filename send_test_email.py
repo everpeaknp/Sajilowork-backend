@@ -45,108 +45,147 @@ def send_test_email():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border: 1px solid #e0e0e0; }
-            .project-card { background: white; padding: 20px; margin: 20px 0; border-left: 4px solid #667eea; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-            .project-title { font-size: 20px; font-weight: bold; color: #2d3748; margin-bottom: 10px; }
-            .project-meta { color: #718096; font-size: 14px; margin: 5px 0; }
-            .budget { font-size: 24px; font-weight: bold; color: #48bb78; margin: 15px 0; }
-            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .footer { background: #2d3748; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; font-size: 12px; }
-        </style>
+        <title>New Job Posted</title>
     </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>🎯 New Job Posted</h1>
-                <p>A new task matching your skills is available!</p>
-            </div>
-            
-            <div class="content">
-                <div class="project-card">
-                    <div class="project-title">
-                        💻 Web Developer Needed for E-commerce Platform
-                    </div>
-                    
-                    <div class="project-meta">
-                        <strong>📍 Location:</strong> Remote (Nepal)
-                    </div>
-                    
-                    <div class="project-meta">
-                        <strong>⏰ Posted:</strong> 2 hours ago
-                    </div>
-                    
-                    <div class="project-meta">
-                        <strong>📅 Deadline:</strong> 7 days from now
-                    </div>
-                    
-                    <div class="budget">
-                        💰 Budget: NPR 50,000 - 80,000
-                    </div>
-                    
-                    <div class="project-meta">
-                        <strong>📋 Description:</strong>
-                    </div>
-                    <p style="margin: 15px 0; line-height: 1.8;">
-                        Looking for an experienced web developer to build a modern e-commerce platform. 
-                        The project includes frontend (React/Next.js), backend (Django/Python), 
-                        payment integration (eSewa/Khalti), and admin dashboard.
-                    </p>
-                    
-                    <div class="project-meta">
-                        <strong>🛠️ Required Skills:</strong>
-                    </div>
-                    <p style="margin: 10px 0;">
-                        • React.js & Next.js<br>
-                        • Python & Django<br>
-                        • PostgreSQL<br>
-                        • Payment Gateway Integration<br>
-                        • RESTful API Development
-                    </p>
-                    
-                    <div class="project-meta">
-                        <strong>👤 Client:</strong> Verified Business Account ✓
-                    </div>
-                    
-                    <div class="project-meta">
-                        <strong>⭐ Client Rating:</strong> 4.8/5.0 (23 reviews)
-                    </div>
-                    
-                    <a href="http://localhost:3000/task/web-developer-ecommerce" class="button">
-                        📝 Make an Offer
-                    </a>
-                </div>
-                
-                <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;">
-                    <strong>💡 Tip:</strong> Apply early! Projects with early bids get 3x more client responses.
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                    <p style="color: #718096; margin: 10px 0;">
-                        This is a <strong>TEST EMAIL</strong> from the Enterprise Email Management System
-                    </p>
-                    <p style="color: #718096; margin: 10px 0;">
-                        Email sent at: {current_time}
-                    </p>
-                </div>
-            </div>
-            
-            <div class="footer">
-                <p><strong>Sajilowork - Nepal's Premier Freelance Platform</strong></p>
-                <p>Connect with skilled professionals and grow your business</p>
-                <p style="margin-top: 15px;">
-                    <a href="http://localhost:3000" style="color: #90cdf4; text-decoration: none;">Visit Website</a> | 
-                    <a href="mailto:mr.bishal.baniya@gmail.com" style="color: #90cdf4; text-decoration: none;">Contact Support</a>
-                </p>
-                <p style="margin-top: 15px; font-size: 11px; color: #a0aec0;">
-                    © 2024 Sajilowork. All rights reserved.<br>
-                    This is an automated test email. Do not reply to this message.
-                </p>
-            </div>
-        </div>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #e5e7eb;">
+                        <!-- Header -->
+                        <tr>
+                            <td style="background-color: #1161fe; padding: 40px; text-align: center;">
+                                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
+                                    New Job Posted
+                                </h1>
+                                <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 15px;">
+                                    A great opportunity just for you
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Content -->
+                        <tr>
+                            <td style="padding: 40px 32px;">
+                                <!-- Job Card -->
+                                <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+                                    <h2 style="color: #171717; margin: 0 0 16px 0; font-size: 22px; font-weight: 700;">
+                                        Web Developer Needed for E-commerce Platform
+                                    </h2>
+                                    
+                                    <div style="margin-bottom: 16px;">
+                                        <span style="display: inline-block; background-color: #45a874; color: #ffffff; padding: 6px 14px; border-radius: 6px; font-size: 14px; font-weight: 600;">
+                                            NPR 50,000 - 80,000
+                                        </span>
+                                    </div>
+                                    
+                                    <p style="color: #6b7280; line-height: 1.7; margin: 16px 0; font-size: 15px;">
+                                        We are looking for an experienced web developer to build a modern e-commerce platform. 
+                                        The project involves creating a responsive online store with payment gateway integration, 
+                                        product management system, and user authentication.
+                                    </p>
+                                    
+                                    <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 20px;">
+                                        <table cellpadding="0" cellspacing="0" width="100%">
+                                            <tr>
+                                                <td style="padding: 6px 0;">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; display: inline-block; margin-right: 8px;">
+                                                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                                                        <circle cx="12" cy="10" r="3"/>
+                                                    </svg>
+                                                    <span style="color: #6b7280; font-size: 14px; vertical-align: middle;">
+                                                        <strong style="color: #171717;">Location:</strong> Kathmandu, Nepal
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0;">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; display: inline-block; margin-right: 8px;">
+                                                        <circle cx="12" cy="12" r="10"/>
+                                                        <polyline points="12 6 12 12 16 14"/>
+                                                    </svg>
+                                                    <span style="color: #6b7280; font-size: 14px; vertical-align: middle;">
+                                                        <strong style="color: #171717;">Posted:</strong> 2 hours ago
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0;">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; display: inline-block; margin-right: 8px;">
+                                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                                        <line x1="16" y1="2" x2="16" y2="6"/>
+                                                        <line x1="8" y1="2" x2="8" y2="6"/>
+                                                        <line x1="3" y1="10" x2="21" y2="10"/>
+                                                    </svg>
+                                                    <span style="color: #6b7280; font-size: 14px; vertical-align: middle;">
+                                                        <strong style="color: #171717;">Due Date:</strong> January 15, 2024
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                <!-- Requirements Section -->
+                                <div style="margin-bottom: 24px;">
+                                    <h3 style="color: #171717; font-size: 17px; font-weight: 700; margin: 0 0 14px 0; display: flex; align-items: center;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1161fe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; display: inline-block; margin-right: 8px;">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <circle cx="12" cy="12" r="6"/>
+                                            <circle cx="12" cy="12" r="2"/>
+                                        </svg>
+                                        Required Skills
+                                    </h3>
+                                    <ul style="color: #6b7280; line-height: 1.8; margin: 0; padding-left: 20px; font-size: 14px;">
+                                        <li style="margin-bottom: 6px;">React.js and Next.js</li>
+                                        <li style="margin-bottom: 6px;">Node.js and Express</li>
+                                        <li style="margin-bottom: 6px;">MongoDB or PostgreSQL</li>
+                                        <li style="margin-bottom: 6px;">Payment Gateway Integration (eSewa, Khalti)</li>
+                                        <li style="margin-bottom: 6px;">RESTful API Development</li>
+                                    </ul>
+                                </div>
+                                
+                                <!-- Client Info -->
+                                <div style="background-color: #f4f8f6; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; margin-bottom: 28px;">
+                                    <h3 style="color: #171717; font-size: 16px; font-weight: 700; margin: 0 0 12px 0; display: flex; align-items: center;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#193e32" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; display: inline-block; margin-right: 8px;">
+                                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                                            <circle cx="12" cy="7" r="4"/>
+                                        </svg>
+                                        About the Client
+                                    </h3>
+                                    <p style="color: #6b7280; margin: 0; line-height: 1.7; font-size: 14px;">
+                                        <strong style="color: #171717;">Rating:</strong> 4.8/5.0<br>
+                                        <strong style="color: #171717;">Jobs Posted:</strong> 12 completed<br>
+                                        <strong style="color: #171717;">Payment Method:</strong> Verified
+                                    </p>
+                                </div>
+                                
+                                <!-- CTA Button -->
+                                <div style="text-align: center; margin-top: 32px;">
+                                    <a href="http://localhost:3000/task/web-developer-needed-123" 
+                                       style="display: inline-block; background-color: #1161fe; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; box-shadow: 0 1px 2px rgba(17, 97, 254, 0.2);">
+                                        View Job Details & Apply
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background-color: #f9fafb; padding: 24px 32px; text-align: center; border-top: 1px solid #e5e7eb;">
+                                <p style="color: #6b7280; font-size: 13px; margin: 0 0 8px 0; line-height: 1.6;">
+                                    This is a test email from Sajilowork Email System
+                                </p>
+                                <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                                    © 2024 Sajilowork. All rights reserved.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </body>
     </html>
     """.replace("{current_time}", timezone.now().strftime("%Y-%m-%d %H:%M:%S %Z"))
@@ -155,32 +194,32 @@ def send_test_email():
     NEW JOB POSTED - Sajilowork
     
     Job Title: Web Developer Needed for E-commerce Platform
-    Location: Remote (Nepal)
+    Location: Kathmandu, Nepal
     Budget: NPR 50,000 - 80,000
     Posted: 2 hours ago
-    Deadline: 7 days from now
+    Due Date: January 15, 2024
     
     Description:
-    Looking for an experienced web developer to build a modern e-commerce platform.
-    The project includes frontend (React/Next.js), backend (Django/Python),
-    payment integration (eSewa/Khalti), and admin dashboard.
+    We are looking for an experienced web developer to build a modern e-commerce platform.
+    The project involves creating a responsive online store with payment gateway integration,
+    product management system, and user authentication.
     
     Required Skills:
-    - React.js & Next.js
-    - Python & Django
-    - PostgreSQL
-    - Payment Gateway Integration
+    - React.js and Next.js
+    - Node.js and Express
+    - MongoDB or PostgreSQL
+    - Payment Gateway Integration (eSewa, Khalti)
     - RESTful API Development
     
-    Client: Verified Business Account
-    Client Rating: 4.8/5.0 (23 reviews)
+    About the Client:
+    Rating: 4.8/5.0
+    Jobs Posted: 12 completed
+    Payment Method: Verified
     
-    Make an offer: http://localhost:3000/task/web-developer-ecommerce
+    View Job Details: http://localhost:3000/task/web-developer-needed-123
     
     ---
-    This is a TEST EMAIL from the Enterprise Email Management System
-    Email sent at: {current_time}
-    
+    This is a test email from Sajilowork Email System
     © 2024 Sajilowork. All rights reserved.
     """.replace("{current_time}", timezone.now().strftime("%Y-%m-%d %H:%M:%S %Z"))
     
