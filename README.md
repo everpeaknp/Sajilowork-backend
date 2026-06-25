@@ -62,6 +62,56 @@ celery -A config beat -l info
 
 For WebSockets, run with Daphne: `daphne config.asgi:application`
 
+## Deployment
+
+### Level 1: Minimal VPS setup
+
+This is the default path for a small server:
+
+```bash
+cp .env.example .env
+# edit .env for production values
+bash scripts/deploy.sh
+```
+
+The default container startup does:
+
+- database migrations
+- static file collection
+- Daphne server startup
+
+Run workers only if you need them:
+
+```bash
+docker compose --profile worker --profile beat up -d
+```
+
+Create admin users manually when needed:
+
+```bash
+docker compose exec web python manage.py createsuperuser
+```
+
+### Level 2: Proper production VPS setup
+
+Use the same image, but keep the process split:
+
+- `web` for the API
+- `worker` for background jobs
+- `beat` for scheduled jobs
+
+Put the stack behind Nginx or Caddy, terminate TLS there, and keep `.env` on the server only.
+
+### Level 3: Cloud-native container deployment
+
+This codebase also fits a managed container platform:
+
+- Cloud Run
+- Azure Container Apps
+- ECS/Fargate
+
+Build one image, push it, and run the API container with platform-managed ingress and secrets.
+
 ## API docs
 
 With the server running:

@@ -511,18 +511,38 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='me/deactivate', permission_classes=[IsAuthenticated])
     def deactivate(self, request):
         """Deactivate current user account."""
+        if request.user.is_superuser or request.user.role == 'admin':
+            return Response(
+                {'error': 'Admin accounts cannot be deactivated from the app.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         request.user.is_active = False
         request.user.save()
         return Response({'message': 'Account deactivated successfully.'}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'], url_path='me/delete', permission_classes=[IsAuthenticated])
     def delete_account(self, request):
-        """Delete current user account."""
+        """Deactivate current user account.
+
+        Hard-deleting a user cascades into uploads, tasks, bids, chat records,
+        notifications, and other related data. Deactivation is the safe default.
+        """
         password = request.data.get('password')
         if not password or not request.user.check_password(password):
             return Response({'error': 'Invalid password.'}, status=status.HTTP_400_BAD_REQUEST)
-        request.user.delete()
-        return Response({'message': 'Account deleted successfully.'}, status=status.HTTP_200_OK)
+
+        if request.user.is_superuser or request.user.role == 'admin':
+            return Response(
+                {'error': 'Admin accounts cannot be deleted from the app.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not request.user.is_active:
+            return Response({'message': 'Account is already deactivated.'}, status=status.HTTP_200_OK)
+
+        request.user.is_active = False
+        request.user.save(update_fields=['is_active', 'updated_at'])
+        return Response({'message': 'Account deactivated successfully.'}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def update_online_status(self, request):

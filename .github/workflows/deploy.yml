@@ -18,5 +18,5 @@ jobs:
           port: 2025
           script: |
             cd ~/Sajilowork-backend
-            git pull origin main
-            docker compose up -d --build
+            git pull --ff-only origin main
+            bash scripts/deploy.sh

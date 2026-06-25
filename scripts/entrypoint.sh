@@ -5,22 +5,17 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-echo "Running database migrations..."
-python manage.py migrate --noinput
+if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
+    echo "Running database migrations..."
+    python manage.py migrate --noinput
+fi
 
-echo "Creating superuser if it doesn't exist..."
-python manage.py shell -c "
-from django.contrib.auth import get_user_model;
-User = get_user_model();
-if not User.objects.filter(email='admin@example.com').exists():
-    User.objects.create_superuser('admin@example.com', 'admin')
-    print('Superuser created successfully')
-else:
-    print('Superuser already exists')
-"
+if [ "${RUN_COLLECTSTATIC:-1}" = "1" ]; then
+    echo "Collecting static files..."
+    python manage.py collectstatic --noinput
+fi
 
-echo "Collecting static files..."
-python manage.py collectstatic --noinput
-
-echo "Starting Daphne server..."
-exec daphne -b 0.0.0.0 -p 8000 config.asgi:application
+if [ "${START_SERVER:-1}" = "1" ]; then
+    echo "Starting Daphne server..."
+    exec daphne -b 0.0.0.0 -p 8000 config.asgi:application
+fi

@@ -1,6 +1,8 @@
 """
 Views for JWT authentication endpoints.
 """
+import logging
+
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -37,6 +39,7 @@ from . import social_oauth
 from . import email_auth
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 @extend_schema_view(
@@ -85,9 +88,11 @@ def login_view(request):
     
     email = serializer.validated_data['email']
     password = serializer.validated_data['password']
+    client_ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get('REMOTE_ADDR', '')
 
     user = User.objects.filter(email__iexact=email).first()
     if not user:
+        logger.warning("Login failed: user not found for email=%s ip=%s", email, client_ip)
         return Response(
             {'error': 'Invalid credentials.'},
             status=status.HTTP_401_UNAUTHORIZED
@@ -100,7 +105,7 @@ def login_view(request):
             social_hint = 'Sign in with Facebook'
         else:
             social_hint = 'Use Forgot password to set a password'
-
+        logger.warning("Login failed: social-only account email=%s user_id=%s ip=%s", email, user.id, client_ip)
         return Response(
             {
                 'error': (
@@ -112,12 +117,14 @@ def login_view(request):
         )
 
     if not user.check_password(password):
+        logger.warning("Login failed: bad password email=%s user_id=%s ip=%s", email, user.id, client_ip)
         return Response(
             {'error': 'Invalid credentials.'},
             status=status.HTTP_401_UNAUTHORIZED
         )
     
     if not user.is_active:
+        logger.warning("Login failed: inactive account email=%s user_id=%s ip=%s", email, user.id, client_ip)
         return Response(
             {'error': 'Account is disabled.'},
             status=status.HTTP_403_FORBIDDEN
@@ -127,6 +134,7 @@ def login_view(request):
     if ModerationService.is_user_suspended(user):
         user = ModerationService.refresh_suspension_state(user)
         if user.account_suspended:
+            logger.warning("Login failed: suspended account email=%s user_id=%s ip=%s", email, user.id, client_ip)
             return Response(
                 {
                     'error': 'Account is temporarily suspended.',
@@ -142,6 +150,7 @@ def login_view(request):
     # Update last login
     user.last_login = timezone.now()
     user.save(update_fields=['last_login'])
+    logger.info("Login succeeded email=%s user_id=%s ip=%s", email, user.id, client_ip)
     
     return Response({
         'access': str(refresh.access_token),
@@ -562,4 +571,3 @@ def facebook_login_view(request):
 )
 def facebook_callback_view(request):
     return _oauth_callback_redirect('facebook', request)
-

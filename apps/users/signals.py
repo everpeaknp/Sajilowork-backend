@@ -1,11 +1,15 @@
 """
 Signal handlers for User app.
 """
-from django.db.models.signals import post_save, pre_save
+import logging
+
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 from django.utils.crypto import get_random_string
 from django.utils import timezone
 from .models import User, UserDocument, UserBadge
+
+logger = logging.getLogger(__name__)
 
 
 @receiver(pre_save, sender=User)
@@ -30,12 +34,71 @@ def generate_username(sender, instance, **kwargs):
         instance.username = username
 
 
+@receiver(pre_save, sender=User)
+def log_user_account_changes(sender, instance, **kwargs):
+    """Log important account mutations for later audit/debugging."""
+    if not instance.pk:
+        return
+
+    previous = User.objects.filter(pk=instance.pk).first()
+    if not previous:
+        return
+
+    changes = []
+    watched_fields = [
+        'email',
+        'role',
+        'is_active',
+        'is_staff',
+        'is_superuser',
+        'account_suspended',
+        'suspended_until',
+    ]
+    for field in watched_fields:
+        old_value = getattr(previous, field)
+        new_value = getattr(instance, field)
+        if old_value != new_value:
+            changes.append(f"{field}: {old_value!r} -> {new_value!r}")
+
+    if previous.password != instance.password:
+        changes.append('password: changed')
+
+    if changes:
+        logger.warning(
+            "User account changed user_id=%s email=%s changes=%s",
+            instance.pk,
+            previous.email,
+            "; ".join(changes),
+        )
+
+
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     """Perform actions after user creation."""
     if created:
+        logger.info(
+            "User created user_id=%s email=%s role=%s is_staff=%s is_superuser=%s",
+            instance.pk,
+            instance.email,
+            instance.role,
+            instance.is_staff,
+            instance.is_superuser,
+        )
         from .models import UserKYC
         UserKYC.objects.get_or_create(user=instance)
+
+
+@receiver(post_delete, sender=User)
+def log_user_deletion(sender, instance, **kwargs):
+    """Log physical user deletions explicitly."""
+    logger.error(
+        "User deleted user_id=%s email=%s role=%s is_staff=%s is_superuser=%s",
+        instance.pk,
+        instance.email,
+        instance.role,
+        instance.is_staff,
+        instance.is_superuser,
+    )
 
 
 @receiver(post_save, sender=UserDocument)
