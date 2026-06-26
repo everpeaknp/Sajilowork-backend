@@ -90,7 +90,16 @@ class EmailTemplateSerializer(serializers.ModelSerializer):
         """Validate at least one channel is enabled"""
         send_email = data.get('send_email', getattr(self.instance, 'send_email', True))
         send_in_app = data.get('send_in_app_notification', getattr(self.instance, 'send_in_app_notification', False))
-        send_push = data.get('send_push_notification', getattr(self.instance, 'send_push_notification', False))opppppppppppppppppppp
+        send_push = data.get('send_push_notification', getattr(self.instance, 'send_push_notification', False))
+        
+        if not any([send_email, send_in_app, send_push]):
+            raise serializers.ValidationError(
+                "At least one notification channel must be enabled."
+            )
+        
+        return data
+
+
 class NotificationRuleSerializer(serializers.ModelSerializer):
     """Full serializer for notification rule management"""
     
