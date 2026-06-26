@@ -105,7 +105,7 @@ urlpatterns = [
     path('api/admin/mails/', include('apps.mails.urls')),  # Email Management System
     
     # Public endpoints
-    path('api/contact/', ContactSubmissionView.as_view(), name='contact-submit'),
+    path('api/v1/contact/', ContactSubmissionView.as_view(), name='contact-submit'),
     
     path('faq/', FaqListAPIView.as_view(), name='faq-list'),
 ]
