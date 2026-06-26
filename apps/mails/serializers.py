@@ -324,3 +324,25 @@ class ContactSubmissionSerializer(serializers.ModelSerializer):
         if not value or len(value.strip()) < 2:
             raise serializers.ValidationError("Name must be at least 2 characters long.")
         return value
+
+
+# Stub serializers for incomplete mails app (to be implemented later)
+class EmailSettingSerializer(serializers.ModelSerializer):
+    """Stub serializer for EmailSetting"""
+    class Meta:
+        model = EmailSetting
+        fields = '__all__'
+
+
+class SMTPConfigurationSerializer(serializers.ModelSerializer):
+    """Stub serializer for SMTPConfiguration"""
+    class Meta:
+        model = SMTPConfiguration
+        fields = '__all__'
+
+
+class NotificationRuleListSerializer(serializers.ModelSerializer):
+    """Stub serializer for NotificationRule list"""
+    class Meta:
+        model = NotificationRule
+        fields = '__all__'
