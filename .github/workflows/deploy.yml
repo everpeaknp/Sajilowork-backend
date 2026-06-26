@@ -18,5 +18,6 @@ jobs:
           port: 2025
           script: |
             cd ~/Sajilowork-backend
-            git pull --ff-only origin main
+            git fetch origin
+            git reset --hard origin/main
             bash scripts/deploy.sh
