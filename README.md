@@ -79,6 +79,8 @@ The default container startup does:
 - database migrations
 - static file collection
 - Daphne server startup
+- app and Postgres share the same `DB_*` settings from `.env`
+- Postgres/media/Redis volumes use fixed names so deploys do not silently create fresh empty volumes when the project name changes
 
 Run workers only if you need them:
 
@@ -91,6 +93,11 @@ Create admin users manually when needed:
 ```bash
 docker compose exec web python manage.py createsuperuser
 ```
+
+Important:
+
+- For the built-in Compose Postgres, keep `DB_HOST=db` in `.env`
+- Only set `DATABASE_URL` when you intentionally want the app to use an external managed database
 
 ### Level 2: Proper production VPS setup
 
