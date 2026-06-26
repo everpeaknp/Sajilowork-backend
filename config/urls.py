@@ -9,6 +9,7 @@ from django.views.generic import RedirectView
 
 from apps.analytics.admin_views import business_analytics_dashboard
 from apps.faq.views import FaqListAPIView
+from apps.mails.views import ContactSubmissionView
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -102,6 +103,9 @@ urlpatterns = [
     
     # Admin-only endpoints
     path('api/admin/mails/', include('apps.mails.urls')),  # Email Management System
+    
+    # Public endpoints
+    path('api/contact/', ContactSubmissionView.as_view(), name='contact-submit'),
     
     path('faq/', FaqListAPIView.as_view(), name='faq-list'),
 ]

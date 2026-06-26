@@ -253,6 +253,78 @@ class NotificationRule(models.Model):
         return f"{self.display_name} ({self.event_name})"
 
 
+class ContactSubmission(models.Model):
+    """Contact form submissions"""
+    
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('read', 'Read'),
+        ('replied', 'Replied'),
+        ('archived', 'Archived'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Contact Details
+    name = models.CharField(max_length=255, help_text="Contact name")
+    email = models.EmailField(validators=[EmailValidator()], help_text="Contact email")
+    message = models.TextField(help_text="Contact message")
+    
+    # Status
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='new',
+        help_text="Submission status"
+    )
+    
+    # Metadata
+    ip_address = models.GenericIPAddressField(null=True, blank=True, help_text="Sender IP address")
+    user_agent = models.CharField(max_length=500, blank=True, help_text="Browser user agent")
+    
+    # Response
+    admin_notes = models.TextField(blank=True, help_text="Admin notes/response")
+    responded_at = models.DateTimeField(null=True, blank=True, help_text="When admin responded")
+    responded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='contact_responses'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'contact_submissions'
+        ordering = ['-created_at']
+        verbose_name = 'Contact Submission'
+        verbose_name_plural = 'Contact Submissions'
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['email']),
+            models.Index(fields=['-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"Contact from {self.name} ({self.email}) - {self.status}"
+    
+    def mark_as_read(self):
+        """Mark submission as read"""
+        if self.status == 'new':
+            self.status = 'read'
+            self.save(update_fields=['status', 'updated_at'])
+    
+    def mark_as_replied(self, admin_user):
+        """Mark submission as replied"""
+        self.status = 'replied'
+        self.responded_at = timezone.now()
+        self.responded_by = admin_user
+        self.save(update_fields=['status', 'responded_at', 'responded_by', 'updated_at'])
+
+
 class EmailLog(models.Model):
     """Log of sent emails with delivery tracking"""
     

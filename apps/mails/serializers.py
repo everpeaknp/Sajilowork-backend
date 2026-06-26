@@ -8,7 +8,8 @@ from .models import (
     EmailSetting,
     SMTPConfiguration,
     NotificationRule,
-    EmailLog
+    EmailLog,
+    ContactSubmission
 )
 
 User = get_user_model()
@@ -89,156 +90,7 @@ class EmailTemplateSerializer(serializers.ModelSerializer):
         """Validate at least one channel is enabled"""
         send_email = data.get('send_email', getattr(self.instance, 'send_email', True))
         send_in_app = data.get('send_in_app_notification', getattr(self.instance, 'send_in_app_notification', False))
-        send_push = data.get('send_push_notification', getattr(self.instance, 'send_push_notification', False))
-        
-        if not any([send_email, send_in_app, send_push]):
-            raise serializers.ValidationError(
-                "At least one notification channel must be enabled."
-            )
-        
-        return data
-
-
-class EmailSettingSerializer(serializers.ModelSerializer):
-    """Serializer for global email settings"""
-    
-    class Meta:
-        model = EmailSetting
-        fields = [
-            'id', 'company_name', 'company_logo', 'support_email',
-            'primary_color', 'secondary_color',
-            'footer_text', 'social_links', 'unsubscribe_url',
-            'email_enabled',
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-    
-    def validate_primary_color(self, value):
-        """Validate hex color format"""
-        if not value.startswith('#') or len(value) != 7:
-            raise serializers.ValidationError(
-                "Color must be in hex format (e.g., #4F46E5)."
-            )
-        return value
-    
-    def validate_secondary_color(self, value):
-        """Validate hex color format"""
-        if not value.startswith('#') or len(value) != 7:
-            raise serializers.ValidationError(
-                "Color must be in hex format (e.g., #10B981)."
-            )
-        return value
-    
-    def validate_social_links(self, value):
-        """Validate social links structure"""
-        if not isinstance(value, dict):
-            raise serializers.ValidationError("Social links must be a dictionary.")
-        return value
-
-
-class SMTPConfigurationSerializer(serializers.ModelSerializer):
-    """Serializer for SMTP configuration with password masking"""
-    
-    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    password_masked = serializers.SerializerMethodField()
-    connection_status = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = SMTPConfiguration
-        fields = [
-            'id', 'name', 'host', 'port', 'username', 
-            'password', 'password_masked', 'encryption',
-            'from_email', 'from_name', 'provider',
-            'is_active', 'last_tested_at', 'test_status',
-            'connection_status',
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = [
-            'id', 'last_tested_at', 'test_status', 
-            'created_at', 'updated_at'
-        ]
-    
-    def get_password_masked(self, obj):
-        """Return masked password for display"""
-        if obj.password:
-            return '*' * min(len(obj.password), 12)
-        return ''
-    
-    def get_connection_status(self, obj):
-        """Get connection status with color indicator"""
-        if obj.test_status == 'success':
-            return {'status': 'connected', 'color': 'green'}
-        elif obj.test_status == 'failed':
-            return {'status': 'failed', 'color': 'red'}
-        else:
-            return {'status': 'not_tested', 'color': 'gray'}
-    
-    def validate_port(self, value):
-        """Validate port range"""
-        if value < 1 or value > 65535:
-            raise serializers.ValidationError("Port must be between 1 and 65535.")
-        return value
-    
-    def validate_host(self, value):
-        """Validate host is not empty"""
-        if not value or not value.strip():
-            raise serializers.ValidationError("Host cannot be empty.")
-        return value
-    
-    def create(self, validated_data):
-        """Create SMTP config with password encryption"""
-        # TODO: Implement password encryption using Fernet
-        # For now, store as-is (will implement in Phase 2)
-        return super().create(validated_data)
-    
-    def update(self, instance, validated_data):
-        """Update SMTP config, encrypt password if provided"""
-        # If password is not provided, keep existing password
-        if 'password' not in validated_data or not validated_data['password']:
-            validated_data.pop('password', None)
-        
-        # TODO: Implement password encryption using Fernet
-        # For now, update as-is (will implement in Phase 2)
-        return super().update(instance, validated_data)
-
-
-class NotificationRuleListSerializer(serializers.ModelSerializer):
-    """Serializer for notification rule list view"""
-    
-    template_name = serializers.SerializerMethodField()
-    channels_enabled = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = NotificationRule
-        fields = [
-            'id', 'event_name', 'event_category', 'display_name',
-            'email_enabled', 'push_enabled', 'inapp_enabled', 'sms_enabled',
-            'user_notification', 'admin_notification',
-            'email_template', 'template_name', 'channels_enabled',
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-    
-    def get_template_name(self, obj):
-        """Get associated template name"""
-        if obj.email_template:
-            return obj.email_template.name
-        return None
-    
-    def get_channels_enabled(self, obj):
-        """Get list of enabled channels"""
-        channels = []
-        if obj.email_enabled:
-            channels.append('email')
-        if obj.push_enabled:
-            channels.append('push')
-        if obj.inapp_enabled:
-            channels.append('inapp')
-        if obj.sms_enabled:
-            channels.append('sms')
-        return channels
-
-
+        send_push = data.get('send_push_notification', getattr(self.instance, 'send_push_notification', False))opppppppppppppppppppp
 class NotificationRuleSerializer(serializers.ModelSerializer):
     """Full serializer for notification rule management"""
     
@@ -441,3 +293,25 @@ class BulkRuleUpdateSerializer(serializers.Serializer):
                 "At least one channel field must be provided."
             )
         return data
+
+
+
+class ContactSubmissionSerializer(serializers.ModelSerializer):
+    """Serializer for contact form submissions"""
+    
+    class Meta:
+        model = ContactSubmission
+        fields = ['id', 'name', 'email', 'message', 'created_at']
+        read_only_fields = ['id', 'created_at']
+    
+    def validate_message(self, value):
+        """Validate message is not empty and has minimum length"""
+        if not value or len(value.strip()) < 10:
+            raise serializers.ValidationError("Message must be at least 10 characters long.")
+        return value
+    
+    def validate_name(self, value):
+        """Validate name is not empty"""
+        if not value or len(value.strip()) < 2:
+            raise serializers.ValidationError("Name must be at least 2 characters long.")
+        return value

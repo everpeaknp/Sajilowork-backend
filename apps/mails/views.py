@@ -546,3 +546,84 @@ class EmailAnalyticsDashboardView(APIView):
                 'to': date_to.isoformat()
             }
         })
+
+
+
+class ContactSubmissionView(APIView):
+    """
+    Public endpoint for contact form submissions.
+    
+    POST /api/contact/
+    Body: {"name": "...", "email": "...", "message": "..."}
+    """
+    permission_classes = []  # Allow anyone to submit
+    throttle_scope = 'contact'
+    
+    def post(self, request):
+        """Submit contact form"""
+        from .serializers import ContactSubmissionSerializer
+        from .models import ContactSubmission
+        
+        serializer = ContactSubmissionSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get client IP and user agent
+        ip_address = self.get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
+        
+        # Save submission
+        submission = serializer.save(
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        
+        # Send notification email to admin (optional)
+        try:
+            from .smtp_manager import SMTPManager
+            from .models import SMTPConfiguration, EmailSetting
+            
+            smtp_config = SMTPConfiguration.objects.filter(is_active=True).first()
+            email_settings = EmailSetting.objects.first()
+            
+            if smtp_config and email_settings:
+                admin_email = email_settings.support_email
+                
+                subject = f"New Contact Form Submission from {submission.name}"
+                html_content = f"""
+                <h2>New Contact Form Submission</h2>
+                <p><strong>Name:</strong> {submission.name}</p>
+                <p><strong>Email:</strong> {submission.email}</p>
+                <p><strong>Message:</strong></p>
+                <p>{submission.message}</p>
+                <hr>
+                <p><small>Submitted at: {submission.created_at}</small></p>
+                <p><small>IP: {submission.ip_address or 'N/A'}</small></p>
+                """
+                
+                SMTPManager.send_email(
+                    smtp_config=smtp_config,
+                    to_email=admin_email,
+                    subject=subject,
+                    html_content=html_content,
+                    text_content=f"New contact from {submission.name} ({submission.email})\n\n{submission.message}"
+                )
+        except Exception as e:
+            logger.error(f"Failed to send admin notification email: {e}")
+            # Don't fail the request if email fails
+        
+        return Response({
+            'success': True,
+            'message': 'Thank you for contacting us. We will get back to you soon.',
+            'submission_id': str(submission.id)
+        }, status=status.HTTP_201_CREATED)
+    
+    def get_client_ip(self, request):
+        """Extract client IP address from request"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
