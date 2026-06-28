@@ -5,6 +5,8 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-config.settings.production}"
+
 if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
     echo "Running database migrations..."
     python manage.py migrate --noinput

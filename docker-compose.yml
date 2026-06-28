@@ -9,6 +9,7 @@ services:
     env_file:
       - .env
     environment:
+      DJANGO_SETTINGS_MODULE: "${DJANGO_SETTINGS_MODULE:-config.settings.production}"
       DB_HOST: "${DB_HOST:-db}"
       DB_PORT: "${DB_PORT:-5432}"
       RUN_MIGRATIONS: "1"
@@ -59,6 +60,7 @@ services:
     env_file:
       - .env
     environment:
+      DJANGO_SETTINGS_MODULE: "${DJANGO_SETTINGS_MODULE:-config.settings.production}"
       RUN_MIGRATIONS: "0"
       RUN_COLLECTSTATIC: "0"
       START_SERVER: "0"
@@ -78,6 +80,7 @@ services:
     env_file:
       - .env
     environment:
+      DJANGO_SETTINGS_MODULE: "${DJANGO_SETTINGS_MODULE:-config.settings.production}"
       RUN_MIGRATIONS: "0"
       RUN_COLLECTSTATIC: "0"
       START_SERVER: "0"
