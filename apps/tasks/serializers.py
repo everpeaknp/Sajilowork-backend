@@ -87,6 +87,25 @@ class CategorySerializer(serializers.ModelSerializer):
         return []
 
 
+class CategoryCreateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=100, trim_whitespace=True)
+    listing_kind = serializers.ChoiceField(choices=LISTING_KIND_CATEGORY_CHOICES)
+
+    def validate_name(self, value):
+        name = ' '.join((value or '').split())
+        if not name:
+            raise serializers.ValidationError('Category name is required.')
+        if len(name) < 2:
+            raise serializers.ValidationError('Category name must be at least 2 characters.')
+        return name
+
+    def validate_listing_kind(self, value):
+        allowed = {choice[0] for choice in LISTING_KIND_CATEGORY_CHOICES}
+        if value not in allowed:
+            raise serializers.ValidationError('Invalid listing type for this category.')
+        return value
+
+
 class TaskAttachmentSerializer(serializers.ModelSerializer):
     """Serializer for task attachments."""
     

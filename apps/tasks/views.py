@@ -4,12 +4,14 @@ Views for Task management.
 import uuid as uuid_module
 
 from django.http import Http404
-from rest_framework import viewsets, status, filters, generics
+from rest_framework import viewsets, status, filters, generics, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 from django.db import transaction
 from django.db.models import Prefetch, Q, Count, Avg, Sum
+from django.db import IntegrityError
+from django.utils.text import slugify
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
@@ -30,6 +32,7 @@ from .attachment_service import (
 from .serializers import (
     TaskListSerializer, TaskDetailSerializer, TaskCreateSerializer,
     TaskUpdateSerializer, TaskStatusSerializer, CategorySerializer,
+    CategoryCreateSerializer,
     TaskAttachmentSerializer, TaskBookmarkSerializer, TaskQuestionSerializer,
     DashboardTaskQuestionSerializer,
     TaskReportSerializer, TaskStatsSerializer
@@ -52,12 +55,21 @@ from apps.rules.integrations import cancel_task_with_rules
 from apps.rules.permissions import NotSuspended
 
 
-class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
+class CategoryViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     """ViewSet for categories."""
 
     serializer_class = CategorySerializer
-    permission_classes = [AllowAny]
     lookup_field = 'slug'
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [IsAuthenticated()]
+        return [AllowAny()]
 
     def get_queryset(self):
         listing_kind = self.request.query_params.get('listing_kind', LISTING_KIND_TASK)
@@ -67,6 +79,64 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
             is_active=True,
             parent=None,
             listing_kind=listing_kind,
+        )
+
+    def _unique_category_slug(self, base: str, listing_kind: str) -> str:
+        slug = slugify(base)[:100] or 'category'
+        candidate = slug
+        counter = 1
+        while Category.objects.filter(slug=candidate, listing_kind=listing_kind).exists():
+            suffix = f'-{counter}'
+            candidate = f'{slug[: 100 - len(suffix)]}{suffix}'
+            counter += 1
+        return candidate
+
+    def create(self, request, *args, **kwargs):
+        serializer = CategoryCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        name = serializer.validated_data['name']
+        listing_kind = serializer.validated_data['listing_kind']
+
+        existing = Category.objects.filter(
+            name__iexact=name,
+            listing_kind=listing_kind,
+            parent=None,
+        ).first()
+        if existing:
+            if not existing.is_active:
+                existing.is_active = True
+                existing.save(update_fields=['is_active'])
+            return Response(
+                CategorySerializer(existing, context=self.get_serializer_context()).data,
+                status=status.HTTP_200_OK,
+            )
+
+        slug = self._unique_category_slug(name, listing_kind)
+        try:
+            category = Category.objects.create(
+                name=name,
+                slug=slug,
+                listing_kind=listing_kind,
+                is_active=True,
+                order=0,
+            )
+        except IntegrityError:
+            existing = Category.objects.filter(
+                name__iexact=name,
+                listing_kind=listing_kind,
+                parent=None,
+            ).first()
+            if existing:
+                return Response(
+                    CategorySerializer(existing, context=self.get_serializer_context()).data,
+                    status=status.HTTP_200_OK,
+                )
+            raise
+
+        return Response(
+            CategorySerializer(category, context=self.get_serializer_context()).data,
+            status=status.HTTP_201_CREATED,
         )
     
     @action(detail=True, methods=['get'])
