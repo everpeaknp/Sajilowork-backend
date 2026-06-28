@@ -63,13 +63,32 @@ def fix_contact_submission_user_fk(apps, schema_editor):
         if connection.vendor == 'postgresql':
             cursor.execute(
                 """
-                SELECT conname FROM pg_constraint
-                WHERE conrelid = 'contact_submissions'::regclass
-                  AND contype = 'f'
-                  AND confrelid = 'users_user'::regclass
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = 'contact_submissions'
+                """
+            )
+            if not cursor.fetchone():
+                return
+
+            # Join pg_catalog — do not cast missing relations to regclass (crashes migrate).
+            cursor.execute(
+                """
+                SELECT c.conname
+                FROM pg_constraint c
+                JOIN pg_class rel ON rel.oid = c.conrelid
+                JOIN pg_class frel ON frel.oid = c.confrelid
+                JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+                WHERE nsp.nspname = 'public'
+                  AND rel.relname = 'contact_submissions'
+                  AND c.contype = 'f'
+                  AND frel.relname = 'users_user'
                 """
             )
             constraints = cursor.fetchall()
+            if not constraints:
+                return
+
             for (conname,) in constraints:
                 cursor.execute(
                     f'ALTER TABLE contact_submissions DROP CONSTRAINT "{conname}"'
@@ -82,6 +101,7 @@ def fix_contact_submission_user_fk(apps, schema_editor):
                 DEFERRABLE INITIALLY DEFERRED
                 """
             )
+            return
 
 
 class Migration(migrations.Migration):
