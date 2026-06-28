@@ -588,26 +588,35 @@ class ContactSubmissionView(APIView):
             email_settings = EmailSetting.objects.first()
             
             if smtp_config and email_settings:
+                from .contact_email_templates import (
+                    build_contact_submission_html,
+                    build_contact_submission_subject,
+                    build_contact_submission_text,
+                )
+
                 admin_email = email_settings.support_email
-                
-                subject = f"New Contact Form Submission from {submission.name}"
-                html_content = f"""
-                <h2>New Contact Form Submission</h2>
-                <p><strong>Name:</strong> {submission.name}</p>
-                <p><strong>Email:</strong> {submission.email}</p>
-                <p><strong>Message:</strong></p>
-                <p>{submission.message}</p>
-                <hr>
-                <p><small>Submitted at: {submission.created_at}</small></p>
-                <p><small>IP: {submission.ip_address or 'N/A'}</small></p>
-                """
-                
+                subject = build_contact_submission_subject(submission.name)
+                html_content = build_contact_submission_html(
+                    name=submission.name,
+                    email=submission.email,
+                    message=submission.message,
+                    submitted_at=submission.created_at,
+                    ip_address=submission.ip_address,
+                )
+                text_content = build_contact_submission_text(
+                    name=submission.name,
+                    email=submission.email,
+                    message=submission.message,
+                    submitted_at=submission.created_at,
+                    ip_address=submission.ip_address,
+                )
+
                 SMTPManager.send_email(
                     smtp_config=smtp_config,
                     to_email=admin_email,
                     subject=subject,
                     html_content=html_content,
-                    text_content=f"New contact from {submission.name} ({submission.email})\n\n{submission.message}"
+                    text_content=text_content,
                 )
         except Exception as e:
             logger.error(f"Failed to send admin notification email: {e}")

@@ -7,6 +7,15 @@ from django.core.mail import send_mail
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
+from .auth_email_templates import (
+    build_email_verification_html,
+    build_email_verification_subject,
+    build_email_verification_text,
+    build_password_reset_html,
+    build_password_reset_subject,
+    build_password_reset_text,
+)
+
 EMAIL_VERIFY_SALT = 'sajilowork-email-verify'
 EMAIL_VERIFY_MAX_AGE = 60 * 60 * 24 * 3  # 3 days
 
@@ -47,19 +56,15 @@ def build_email_verification_link(user) -> str:
 def send_password_reset_email(user) -> str:
     link = build_password_reset_link(user)
     display_name = user.get_full_name() or user.email.split('@')[0]
-    subject = f'Reset your {app_name()} password'
-    message = (
-        f'Hi {display_name},\n\n'
-        'You requested a password reset. Open the link below to choose a new password:\n\n'
-        f'{link}\n\n'
-        'This link expires in 24 hours. If you did not request this, you can ignore this email.\n\n'
-        f'— {app_name()}'
-    )
+    subject = build_password_reset_subject()
+    message = build_password_reset_text(display_name=display_name, link=link)
+    html_message = build_password_reset_html(display_name=display_name, link=link)
     send_mail(
         subject=subject,
         message=message,
         from_email=default_from_email(),
         recipient_list=[user.email],
+        html_message=html_message,
         fail_silently=False,
     )
     return link
@@ -71,19 +76,15 @@ def send_email_verification_email(user) -> str | None:
 
     link = build_email_verification_link(user)
     display_name = user.get_full_name() or user.email.split('@')[0]
-    subject = f'Verify your {app_name()} email'
-    message = (
-        f'Hi {display_name},\n\n'
-        'Thanks for signing up. Please verify your email address by opening this link:\n\n'
-        f'{link}\n\n'
-        'This link expires in 3 days. If you did not create an account, you can ignore this email.\n\n'
-        f'— {app_name()}'
-    )
+    subject = build_email_verification_subject()
+    message = build_email_verification_text(display_name=display_name, link=link)
+    html_message = build_email_verification_html(display_name=display_name, link=link)
     send_mail(
         subject=subject,
         message=message,
         from_email=default_from_email(),
         recipient_list=[user.email],
+        html_message=html_message,
         fail_silently=False,
     )
     return link

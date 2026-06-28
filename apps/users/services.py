@@ -5,6 +5,16 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from django.core.cache import cache
+
+from apps.accounts.auth_email_templates import (
+    build_email_verification_html,
+    build_email_verification_subject,
+    build_email_verification_text,
+    build_password_reset_html,
+    build_password_reset_subject,
+    build_password_reset_text,
+)
+
 from .models import User, UserBadge
 
 
@@ -17,17 +27,19 @@ class UserService:
         token = get_random_string(length=64)
         cache_key = f'email_verification_{token}'
         cache.set(cache_key, user.id, timeout=86400)  # 24 hours
-        
+
         verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
-        
+        display_name = user.get_full_name() or user.email.split('@')[0]
+
         send_mail(
-            subject='Verify your email address',
-            message=f'Please click the link to verify your email: {verification_url}',
+            subject=build_email_verification_subject(),
+            message=build_email_verification_text(display_name=display_name, link=verification_url),
+            html_message=build_email_verification_html(display_name=display_name, link=verification_url),
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
             fail_silently=False,
         )
-        
+
         return token
     
     @staticmethod
@@ -54,17 +66,19 @@ class UserService:
         token = get_random_string(length=64)
         cache_key = f'password_reset_{token}'
         cache.set(cache_key, user.id, timeout=3600)  # 1 hour
-        
+
         reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
-        
+        display_name = user.get_full_name() or user.email.split('@')[0]
+
         send_mail(
-            subject='Reset your password',
-            message=f'Please click the link to reset your password: {reset_url}',
+            subject=build_password_reset_subject(),
+            message=build_password_reset_text(display_name=display_name, link=reset_url),
+            html_message=build_password_reset_html(display_name=display_name, link=reset_url),
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
             fail_silently=False,
         )
-        
+
         return token
     
     @staticmethod
