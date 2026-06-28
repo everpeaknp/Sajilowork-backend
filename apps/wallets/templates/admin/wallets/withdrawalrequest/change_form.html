@@ -16,6 +16,16 @@
       if (approvalRow && approvalRow.parentNode) {
         approvalRow.insertAdjacentElement("afterend", panel);
       }
+
+      var rejectBtn = panel.querySelector('input[name="_reject_withdrawal"]');
+      if (rejectBtn) {
+        var rejectMsg = "{% filter escapejs %}{% translate 'Reject this withdrawal request?' %}{% endfilter %}";
+        rejectBtn.addEventListener("click", function (event) {
+          if (!window.confirm(rejectMsg)) {
+            event.preventDefault();
+          }
+        });
+      }
     });
   </script>
 {% endblock %}
@@ -35,7 +45,6 @@
         class="deletelink"
         name="_reject_withdrawal"
         style="margin-left: 10px;"
-        onclick="return confirm('{% translate "Reject this withdrawal request?" %}');"
       >
     </div>
   {% endif %}
