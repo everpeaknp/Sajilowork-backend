@@ -10,6 +10,7 @@ from django.views.generic import RedirectView
 from apps.analytics.admin_views import business_analytics_dashboard
 from apps.faq.views import FaqListAPIView
 from apps.mails.views import ContactSubmissionView
+from utils.health import health_check
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -17,6 +18,7 @@ from drf_spectacular.views import (
 )
 
 urlpatterns = [
+    path('health/', health_check, name='health-check'),
     # Platform business analytics (staff only)
     path(
         'admin/analytics/',
@@ -50,28 +52,52 @@ urlpatterns = [
         name='admin-bookmark-home',
     ),
     path('admin/', admin.site.urls),
+]
 
-    # API documentation (OpenAPI 3 — Swagger UI + ReDoc)
-    # Core schema used by all documentation frontends.
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    # Primary Swagger UI used by engineers and the Next.js team.
-    path(
-        'api/docs/',
-        SpectacularSwaggerView.as_view(url_name='schema'),
-        name='swagger-ui',
-    ),
-    # Branded Swagger UI entrypoint for business / product stakeholders.
-    # This simply reuses the same OpenAPI schema, but lets you apply a
-    # custom favicon / title / CSS if desired.
-    path(
-        'api/docs/sajilowork/',
-        SpectacularSwaggerView.as_view(url_name='schema'),
-        name='swagger-ui-sajilowork',
-    ),
-    # Read‑only, text‑focused reference.
-    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    
-    # API v1 - Only enabled apps
+# API documentation — public in DEBUG; staff-only in production.
+if settings.DEBUG:
+    urlpatterns += [
+        path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+        path(
+            'api/docs/',
+            SpectacularSwaggerView.as_view(url_name='schema'),
+            name='swagger-ui',
+        ),
+        path(
+            'api/docs/sajilowork/',
+            SpectacularSwaggerView.as_view(url_name='schema'),
+            name='swagger-ui-sajilowork',
+        ),
+        path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    ]
+else:
+    from rest_framework.permissions import IsAdminUser
+
+    class StaffSpectacularAPIView(SpectacularAPIView):
+        permission_classes = [IsAdminUser]
+
+    class StaffSpectacularSwaggerView(SpectacularSwaggerView):
+        permission_classes = [IsAdminUser]
+
+    class StaffSpectacularRedocView(SpectacularRedocView):
+        permission_classes = [IsAdminUser]
+
+    urlpatterns += [
+        path('api/schema/', StaffSpectacularAPIView.as_view(), name='schema'),
+        path(
+            'api/docs/',
+            StaffSpectacularSwaggerView.as_view(url_name='schema'),
+            name='swagger-ui',
+        ),
+        path(
+            'api/docs/sajilowork/',
+            StaffSpectacularSwaggerView.as_view(url_name='schema'),
+            name='swagger-ui-sajilowork',
+        ),
+        path('api/redoc/', StaffSpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    ]
+
+urlpatterns += [
     path('api/v1/auth/', include('apps.accounts.urls')),
     path('api/v1/users/', include('apps.users.urls')),
     path('api/v1/employers/', include('apps.users.employer_urls')),

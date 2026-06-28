@@ -179,9 +179,13 @@ class SMTPConfiguration(models.Model):
         return f"{self.name} ({self.provider})"
     
     def save(self, *args, **kwargs):
-        """Ensure only one active SMTP configuration"""
+        """Ensure only one active SMTP configuration; encrypt password at rest."""
+        from apps.mails.smtp_manager import SMTPManager
+
+        if self.password and not str(self.password).startswith('enc:'):
+            self.password = SMTPManager.encrypt_password(self.password)
         if self.is_active:
-            SMTPConfiguration.objects.filter(is_active=True).update(is_active=False)
+            SMTPConfiguration.objects.filter(is_active=True).exclude(pk=self.pk).update(is_active=False)
         return super().save(*args, **kwargs)
 
 

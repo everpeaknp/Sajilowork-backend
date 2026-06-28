@@ -1,9 +1,13 @@
 """
 Custom exception handlers and error responses.
 """
+from django.conf import settings
 from rest_framework.views import exception_handler
 from rest_framework.response import Response
 from rest_framework import status
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def custom_exception_handler(exc, context):
@@ -22,13 +26,16 @@ def custom_exception_handler(exc, context):
         }
         response.data = custom_response_data
     else:
-        # Unhandled exception (500)
-        import traceback
+        logger.exception('Unhandled API exception', exc_info=exc)
+        details = {'detail': 'An unexpected error occurred.'}
+        if settings.DEBUG:
+            import traceback
+            details = {'detail': traceback.format_exc()}
         return Response({
             'success': False,
             'error': {
                 'message': 'Internal Server Error',
-                'details': {'detail': traceback.format_exc()}
+                'details': details,
             }
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     

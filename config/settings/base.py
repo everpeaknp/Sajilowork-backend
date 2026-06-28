@@ -23,6 +23,7 @@ from decouple import config, Csv
 
 # Security Settings
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
+SMTP_ENCRYPTION_KEY = config('SMTP_ENCRYPTION_KEY', default='')
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 CSRF_TRUSTED_ORIGINS = config(
@@ -232,8 +233,11 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
-        'user': '1000/hour',
-        'burst': '60/minute',
+        'user': '3000/hour',
+        'burst': '120/minute',
+        'contact': '5/hour',
+        'login': '10/minute',
+        'password_reset': '5/hour',
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'utils.exceptions.custom_exception_handler',

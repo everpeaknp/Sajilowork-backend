@@ -130,4 +130,4 @@ if __name__ == '__main__':
     success = setup_smtp()
     if success:
         print("\n✓ You can now send test emails!")
-        print("  Run: python send_test_email.py")
+        print("  Run: python scripts/dev/send_test_email.py")

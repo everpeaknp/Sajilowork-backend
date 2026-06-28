@@ -37,6 +37,13 @@ apps/
   blog/           uploads/
 ```
 
+## Documentation
+
+- Setup and deployment: this README
+- Internal notes and API exports: [doc/INDEX.md](./doc/INDEX.md)
+- Dev/debug scripts: [scripts/dev/](./scripts/dev/)
+- Windows helper: `scripts/runserver.bat` (runs `manage.py` with venv)
+
 ## Getting started
 
 **Prerequisites:** Python 3.11+, PostgreSQL 14+, Redis 6+

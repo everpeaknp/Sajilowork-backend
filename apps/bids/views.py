@@ -31,7 +31,7 @@ from .serializers import (
     BidNotificationSerializer,
     BidStatsSerializer,
 )
-from .permissions import IsBidOwner, IsTaskOwner, CanAcceptBid, CanRejectBid
+from .permissions import IsBidOwner, IsBidParticipant, IsTaskOwner, CanAcceptBid, CanRejectBid
 from apps.tasks.models import Task, TaskAttachment
 
 
@@ -123,6 +123,8 @@ class BidViewSet(viewsets.ModelViewSet):
             task_id = self.request.query_params.get('task')
             if task_id and Task.objects.filter(id=task_id, is_public=True).exists():
                 return [AllowAny()]
+        if self.action == 'retrieve':
+            return [IsAuthenticated(), IsBidParticipant()]
         if self.action == 'accept':
             return [IsAuthenticated(), CanAcceptBid()]
         elif self.action == 'reject':

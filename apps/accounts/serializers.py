@@ -16,6 +16,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         """Add custom claims to token."""
         data = super().validate(attrs)
+
+        if not self.user.email_verified:
+            raise serializers.ValidationError(
+                'Please verify your email before signing in. Check your inbox or request a new verification link.',
+                code='email_not_verified',
+            )
         
         # Add user information to response
         data['user'] = {
@@ -24,7 +30,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'first_name': self.user.first_name,
             'last_name': self.user.last_name,
             'role': self.user.role,
-            'is_verified': self.user.is_email_verified,
+            'is_verified': self.user.email_verified,
             'profile_image': self.user.profile_image,
         }
         

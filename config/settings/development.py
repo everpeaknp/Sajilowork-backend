@@ -95,6 +95,9 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
     'anon': '100000/hour',  # Very high limit for development
     'user': '100000/hour',  # Very high limit for development
     'burst': '10000/minute',  # Very high burst limit for development
+    'contact': '1000/hour',
+    'login': '1000/minute',
+    'password_reset': '1000/hour',
 }
 
 # Logging

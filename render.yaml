@@ -1,72 +1,136 @@
-databases:
-  - name: sajilowork-db
-    databaseName: sajilowork
-    user: sajilowork_user
-
-  - type: redis
-    name: sajilowork-redis
-    plan: free
-    ipAllowList: [] # internal connections only by default
-
-services:
-  - type: web
-    name: sajilowork-backend
-    env: docker
-    dockerfilePath: ./Dockerfile
-    region: oregon
-    plan: free
-    healthCheckPath: /api/schema/redoc/ # Or any other public health endpoint
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: sajilowork-db
-          property: connectionString
-      - key: REDIS_URL
-        fromDatabase:
-          name: sajilowork-redis
-          property: connectionString
-      - key: CELERY_BROKER_URL
-        fromDatabase:
-          name: sajilowork-redis
-          property: connectionString
-      - key: CELERY_RESULT_BACKEND
-        fromDatabase:
-          name: sajilowork-redis
-          property: connectionString
-      - key: DJANGO_SETTINGS_MODULE
-        value: config.settings.production
-      - key: SECRET_KEY
-        generateValue: true
-      - key: DEBUG
-        value: "False"
-      - key: ALLOWED_HOSTS
-        value: "*"
-      # Cloudinary — set in Render Dashboard (Environment) for production uploads
-      - key: CLOUDINARY_CLOUD_NAME
-        sync: false
-      - key: CLOUDINARY_API_KEY
-        sync: false
-      - key: CLOUDINARY_API_SECRET
-        sync: false
-      - key: CLOUDINARY_UPLOAD_PRESET
-        sync: false
-      - key: CLOUDINARY_DEFAULT_FOLDER
-        value: Sajilowork
-      - key: FRONTEND_URL
-        sync: false
-      - key: BACKEND_URL
-        sync: false
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: GOOGLE_OAUTH_REDIRECT_URI
-        sync: false
-      # Render Dashboard → Environment (required for Google sign-in on production):
-      #   GOOGLE_CLIENT_ID=<new Web client ID from Google Cloud Console>
-      #   GOOGLE_CLIENT_SECRET=<matching client secret>
-      #   GOOGLE_OAUTH_REDIRECT_URI=https://sajiloworkbackend.everacy.com/api/v1/auth/google/callback/
-      #   BACKEND_URL=https://sajiloworkbackend.everacy.com
-      #   FRONTEND_URL=https://www.sajilowork.com
-      # Google Console → Authorized JavaScript origins: https://www.sajilowork.com
-      # Add the same redirect URI under Google Console → Credentials → Authorized redirect URIs.
+databases:
+  - name: sajilowork-db
+    databaseName: sajilowork
+    user: sajilowork_user
+
+  - type: redis
+    name: sajilowork-redis
+    plan: free
+    ipAllowList: [] # internal connections only by default
+
+services:
+  - type: web
+    name: sajilowork-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    region: oregon
+    plan: free
+    healthCheckPath: /health/
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sajilowork-db
+          property: connectionString
+      - key: REDIS_URL
+        fromDatabase:
+          name: sajilowork-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromDatabase:
+          name: sajilowork-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromDatabase:
+          name: sajilowork-redis
+          property: connectionString
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "sajiloworkbackend.everacy.com,.onrender.com"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://www.sajilowork.com,https://sajilowork.com,https://sajilowork.everacy.com"
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_UPLOAD_PRESET
+        sync: false
+      - key: CLOUDINARY_DEFAULT_FOLDER
+        value: Sajilowork
+      - key: FRONTEND_URL
+        sync: false
+      - key: BACKEND_URL
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SMTP_ENCRYPTION_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_OAUTH_REDIRECT_URI
+        sync: false
+      # Render Dashboard → Environment (required for Google sign-in on production):
+      #   GOOGLE_CLIENT_ID=<new Web client ID from Google Cloud Console>
+      #   GOOGLE_CLIENT_SECRET=<matching client secret>
+      #   GOOGLE_OAUTH_REDIRECT_URI=https://sajiloworkbackend.everacy.com/api/v1/auth/google/callback/
+      #   BACKEND_URL=https://sajiloworkbackend.everacy.com
+      #   FRONTEND_URL=https://www.sajilowork.com
+      #   SENTRY_DSN=<optional backend Sentry DSN>
+      #   SMTP_ENCRYPTION_KEY=<Fernet key for admin SMTP passwords>
+      # Google Console → Authorized JavaScript origins: https://www.sajilowork.com
+      # Add the same redirect URI under Google Console → Credentials → Authorized redirect URIs.
+
+  - type: worker
+    name: sajilowork-celery
+    env: docker
+    dockerfilePath: ./Dockerfile
+    region: oregon
+    plan: free
+    dockerCommand: celery -A config worker -B -l info
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sajilowork-db
+          property: connectionString
+      - key: REDIS_URL
+        fromDatabase:
+          name: sajilowork-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromDatabase:
+          name: sajilowork-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromDatabase:
+          name: sajilowork-redis
+          property: connectionString
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: SECRET_KEY
+        fromService:
+          name: sajilowork-backend
+          type: web
+          envVarKey: SECRET_KEY
+      - key: DEBUG
+        value: "False"
+      - key: RUN_MIGRATIONS
+        value: "0"
+      - key: RUN_COLLECTSTATIC
+        value: "0"
+      - key: START_SERVER
+        value: "0"
+      - key: ALLOWED_HOSTS
+        value: "sajiloworkbackend.everacy.com,.onrender.com"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://www.sajilowork.com,https://sajilowork.com,https://sajilowork.everacy.com"
+      - key: FRONTEND_URL
+        sync: false
+      - key: BACKEND_URL
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: SMTP_ENCRYPTION_KEY
+        sync: false
+

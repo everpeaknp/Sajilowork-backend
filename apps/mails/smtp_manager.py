@@ -9,6 +9,7 @@ import logging
 import smtplib
 
 from .models import SMTPConfiguration
+from utils.field_encryption import decrypt_secret, encrypt_secret
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ class SMTPManager:
                     server.starttls()
             
             # Authenticate
-            server.login(smtp_config.username, smtp_config.password)
+            server.login(smtp_config.username, cls.decrypt_password(smtp_config.password))
             
             # Close connection
             server.quit()
@@ -99,7 +100,7 @@ class SMTPManager:
                 host=smtp_config.host,
                 port=smtp_config.port,
                 username=smtp_config.username,
-                password=smtp_config.password,
+                password=cls.decrypt_password(smtp_config.password),
                 use_tls=(smtp_config.encryption == 'tls'),
                 use_ssl=(smtp_config.encryption == 'ssl'),
                 fail_silently=False,
@@ -198,34 +199,8 @@ class SMTPManager:
     
     @classmethod
     def encrypt_password(cls, password: str) -> str:
-        """
-        Encrypt SMTP password for storage.
-        
-        TODO: Implement using cryptography.fernet
-        For now, returns password as-is (will be implemented in security phase)
-        
-        Args:
-            password: Plain text password
-            
-        Returns:
-            Encrypted password
-        """
-        # Placeholder - will implement Fernet encryption
-        return password
-    
+        return encrypt_secret(password)
+
     @classmethod
     def decrypt_password(cls, encrypted_password: str) -> str:
-        """
-        Decrypt SMTP password for use.
-        
-        TODO: Implement using cryptography.fernet
-        For now, returns password as-is (will be implemented in security phase)
-        
-        Args:
-            encrypted_password: Encrypted password
-            
-        Returns:
-            Decrypted password
-        """
-        # Placeholder - will implement Fernet decryption
-        return encrypted_password
+        return decrypt_secret(encrypted_password)

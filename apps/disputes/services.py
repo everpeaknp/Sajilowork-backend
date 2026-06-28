@@ -58,11 +58,32 @@ class DisputeService:
     @staticmethod
     @transaction.atomic
     def resolve_dispute(*, dispute: Dispute, admin_user, resolution: str, notes: str = '') -> Dispute:
+        from apps.payments.escrow_lifecycle import EscrowLifecycleService
+
         dispute.status = 'resolved'
         dispute.resolution = resolution
         dispute.resolution_notes = notes
         dispute.resolved_by = admin_user
         dispute.resolved_at = timezone.now()
         dispute.save()
+
+        task = dispute.task
+        reason = notes or f'Dispute resolved: {resolution}'
+
+        if resolution == 'release_payment':
+            EscrowLifecycleService.release_escrow(task, actor=admin_user, force=True)
+            if task.status in ('disputed', 'in_progress', 'submitted'):
+                task.status = 'completed'
+                task.save(update_fields=['status', 'updated_at'])
+        elif resolution == 'refund_full':
+            EscrowLifecycleService.refund_escrow(task, reason=reason, actor=admin_user)
+            if task.status != 'cancelled':
+                task.status = 'cancelled'
+                task.save(update_fields=['status', 'updated_at'])
+        elif resolution == 'refund_partial':
+            EscrowLifecycleService.refund_escrow(task, reason=reason, actor=admin_user)
+        elif resolution == 'revision_required' and task.status == 'disputed':
+            task.status = 'in_progress'
+            task.save(update_fields=['status', 'updated_at'])
 
         return dispute

@@ -585,15 +585,16 @@ class UserViewSet(viewsets.ModelViewSet):
         # Store code in cache/session (expires in 10 minutes)
         # In production, use Redis or similar
         request.session[f'phone_verification_{phone}'] = verification_code
-        
-        # TODO: Send SMS with verification code
-        # For development, just return success
-        print(f"Verification code for {phone}: {verification_code}")
-        
-        return Response({
+
+        # TODO: Send SMS with verification code via Twilio/AWS SNS
+        response_payload = {
             'message': 'Verification code sent successfully.',
-            'phone': phone
-        }, status=status.HTTP_200_OK)
+            'phone': phone,
+        }
+        if settings.DEBUG:
+            response_payload['debug_code'] = verification_code
+
+        return Response(response_payload, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['post'], url_path='me/verify-phone', permission_classes=[IsAuthenticated])
     def verify_phone(self, request):
@@ -938,14 +939,9 @@ class UserRegistrationView(generics.CreateAPIView):
             if settings.DEBUG:
                 raise
 
-        refresh = RefreshToken.for_user(user)
-        user.last_login = timezone.now()
-        user.save(update_fields=['last_login'])
-
         return Response({
-            'message': 'User registered successfully. Please verify your email.',
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
+            'message': 'User registered successfully. Please verify your email before signing in.',
+            'email_verification_required': True,
             'user': UserDetailSerializer(user).data,
         }, status=status.HTTP_201_CREATED)
 

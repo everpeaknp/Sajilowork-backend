@@ -13,7 +13,21 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-CORS_ALLOW_ALL_ORIGINS = True
+
+# Explicit origins only — never allow all origins with credentials enabled.
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='https://www.sajilowork.com,https://sajilowork.com,https://sajilowork.everacy.com,http://localhost:3000,http://127.0.0.1:3000',
+    cast=Csv(),
+)
+
+# WebSockets (Daphne entrypoint) require channels when Redis is available.
+if config('REDIS_URL', default=''):
+    INSTALLED_APPS = ['daphne', *[app for app in INSTALLED_APPS if app != 'daphne']]
+    if 'channels' not in INSTALLED_APPS:
+        cors_idx = INSTALLED_APPS.index('corsheaders')
+        INSTALLED_APPS.insert(cors_idx + 1, 'channels')
 
 # Logging
 LOGGING = {
@@ -63,4 +77,19 @@ GOOGLE_OAUTH_REDIRECT_URI = config(
     'GOOGLE_OAUTH_REDIRECT_URI',
     default='https://sajiloworkbackend.everacy.com/api/v1/auth/google/callback/',
 )
+
+# Error monitoring (optional — set SENTRY_DSN in environment)
+SENTRY_DSN = config('SENTRY_DSN', default='')
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration(), CeleryIntegration()],
+        traces_sample_rate=config('SENTRY_TRACES_SAMPLE_RATE', default=0.1, cast=float),
+        send_default_pii=False,
+        environment=config('SENTRY_ENVIRONMENT', default='production'),
+    )
 

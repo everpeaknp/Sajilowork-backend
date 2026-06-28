@@ -5,6 +5,7 @@ REST API endpoints for template management, SMTP configuration, notification rul
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
@@ -557,6 +558,7 @@ class ContactSubmissionView(APIView):
     Body: {"name": "...", "email": "...", "message": "..."}
     """
     permission_classes = []  # Allow anyone to submit
+    throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'contact'
     
     def post(self, request):

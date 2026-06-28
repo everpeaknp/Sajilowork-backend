@@ -4,7 +4,7 @@ Views for JWT authentication endpoints.
 import logging
 
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -37,6 +37,7 @@ from .serializers import (
 )
 from . import social_oauth
 from . import email_auth
+from utils.throttles import LoginRateThrottle, PasswordResetRateThrottle
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -55,6 +56,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     Custom JWT token obtain view that includes user information.
     """
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [LoginRateThrottle]
 
 
 @extend_schema(
@@ -78,6 +80,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([LoginRateThrottle])
 def login_view(request):
     """
     User login endpoint.
@@ -128,6 +131,17 @@ def login_view(request):
         return Response(
             {'error': 'Account is disabled.'},
             status=status.HTTP_403_FORBIDDEN
+        )
+
+    if not user.email_verified:
+        logger.warning("Login failed: email not verified email=%s user_id=%s ip=%s", email, user.id, client_ip)
+        return Response(
+            {
+                'error': 'Please verify your email before signing in. Check your inbox or request a new verification link.',
+                'code': 'email_not_verified',
+                'email': user.email,
+            },
+            status=status.HTTP_403_FORBIDDEN,
         )
 
     from apps.rules.services import ModerationService
@@ -203,6 +217,7 @@ def logout_view(request):
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([PasswordResetRateThrottle])
 def password_reset_request_view(request):
     """
     Request password reset.

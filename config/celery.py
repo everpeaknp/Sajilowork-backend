@@ -31,6 +31,14 @@ app.conf.beat_schedule = {
         'task': 'apps.payments.tasks.process_pending_payouts',
         'schedule': crontab(minute=0),
     },
+    'auto-release-escrow-hourly': {
+        'task': 'apps.payments.tasks.auto_release_escrow',
+        'schedule': crontab(minute=15),
+    },
+    'sync-payment-status-every-10-minutes': {
+        'task': 'apps.payments.tasks.sync_payment_status',
+        'schedule': crontab(minute='*/10'),
+    },
     'update-task-statuses-every-hour': {
         'task': 'apps.tasks.tasks.update_overdue_tasks',
         'schedule': crontab(minute=30),

@@ -4,6 +4,26 @@ Custom permissions for Bids app.
 from rest_framework import permissions
 
 
+class IsBidParticipant(permissions.BasePermission):
+    """
+    Tasker, task owner, staff, or (read-only) viewers of bids on public tasks.
+    """
+
+    message = 'You are not allowed to access this bid.'
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_staff or getattr(user, 'is_admin', False):
+            return True
+        if obj.tasker == user or obj.task.owner == user:
+            return True
+        if view.action == 'retrieve' and obj.task.is_public:
+            return True
+        return False
+
+
 class IsBidOwner(permissions.BasePermission):
     """
     Permission to check if user is the bid owner (tasker who submitted the bid).
