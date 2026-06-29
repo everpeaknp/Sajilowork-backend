@@ -796,7 +796,7 @@ class TaskAttachmentViewSet(viewsets.ModelViewSet):
         )
     
     def create(self, request, *args, **kwargs):
-        """Accept multipart file upload or a Cloudinary image URL."""
+        """Accept multipart file upload or a Cloudinary file URL."""
         uploaded_file = request.FILES.get('file')
         file_url = (request.data.get('file_url') or '').strip()
 
@@ -833,11 +833,19 @@ class TaskAttachmentViewSet(viewsets.ModelViewSet):
             except (TypeError, ValueError):
                 file_size = 0
 
+            content_type = (request.data.get('content_type') or '').lower()
+            file_type = classify_task_attachment_type(content_type, file_name)
+            if file_type not in ('image', 'document'):
+                return Response(
+                    {'error': TASK_ATTACHMENT_TYPE_ERROR},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             attachment = TaskAttachment.objects.create(
                 task=task,
                 file_url=file_url,
                 file_name=file_name,
-                file_type='image',
+                file_type=file_type,
                 file_size=file_size,
                 uploaded_by=request.user,
             )

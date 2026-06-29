@@ -1,5 +1,5 @@
 """
-Task attachment uploads: Cloudinary for images, local media for documents.
+Task attachment uploads: Cloudinary when configured, local media as fallback.
 """
 import os
 import uuid
@@ -7,9 +7,21 @@ import uuid
 from django.conf import settings
 from django.core.files.storage import default_storage
 
-from apps.uploads.cloudinary_folders import cloudinary_task_attachments_folder
+from apps.tasks.listing import (
+    LISTING_KIND_JOB,
+    LISTING_KIND_PROJECT,
+    LISTING_KIND_SERVICE,
+    get_listing_kind,
+)
+from apps.uploads.cloudinary_folders import (
+    cloudinary_jobs_folder,
+    cloudinary_projects_folder,
+    cloudinary_services_folder,
+    cloudinary_task_attachments_folder,
+)
 from apps.uploads.cloudinary_utils import (
     cloudinary_enabled,
+    infer_cloudinary_resource_type,
     is_cloudinary_permission_error,
     is_cloudinary_url,
     upload_file_to_cloudinary,
@@ -43,26 +55,32 @@ TASK_ATTACHMENT_TYPE_ERROR = (
 )
 
 
-def _is_image_upload(content_type: str, filename: str) -> bool:
-    ct = (content_type or '').lower()
-    if ct.startswith('image/'):
-        return True
-    ext = os.path.splitext(filename or '')[1].lower()
-    return ext in {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'}
+def _cloudinary_folder_for_task(task) -> str:
+    kind = get_listing_kind(getattr(task, 'tags', None))
+    if kind == LISTING_KIND_PROJECT:
+        return cloudinary_projects_folder()
+    if kind == LISTING_KIND_SERVICE:
+        return cloudinary_services_folder()
+    if kind == LISTING_KIND_JOB:
+        return cloudinary_jobs_folder()
+    return cloudinary_task_attachments_folder(task.id)
 
 
 def save_task_attachment_upload(user, task, uploaded_file) -> str:
     """
     Store attachment and return a public URL.
-    Images prefer Cloudinary when configured; documents stay on local media.
+    Prefers Cloudinary for all allowed file types when configured.
     """
-    content_type = (getattr(uploaded_file, 'content_type', '') or '').lower()
     filename = uploaded_file.name or 'attachment'
 
-    if _is_image_upload(content_type, filename) and cloudinary_enabled():
-        folder = cloudinary_task_attachments_folder(task.id)
+    if cloudinary_enabled():
+        folder = _cloudinary_folder_for_task(task)
         try:
-            result = upload_file_to_cloudinary(uploaded_file, folder=folder)
+            result = upload_file_to_cloudinary(
+                uploaded_file,
+                folder=folder,
+                resource_type=infer_cloudinary_resource_type(uploaded_file),
+            )
             url = result.get('secure_url') or result.get('url')
             if url:
                 return url
@@ -129,4 +147,4 @@ def is_allowed_task_attachment(content_type: str, filename: str) -> bool:
 
 def validate_cloudinary_attachment_url(file_url: str) -> None:
     if not is_cloudinary_url(file_url):
-        raise ValueError('Invalid image URL. Only Cloudinary URLs are accepted.')
+        raise ValueError('Invalid file URL. Only Cloudinary URLs are accepted.')
