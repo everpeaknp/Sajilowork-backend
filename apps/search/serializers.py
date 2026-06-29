@@ -7,6 +7,7 @@ from apps.search.models import (
     SearchHistory, SavedSearch, PopularSearch,
     SearchSuggestion, SearchFilter
 )
+from apps.tasks.listing import get_listing_kind
 from apps.tasks.models import Task, Category
 from apps.tasks.serializers import TaskOwnerEmployerMixin, _resolve_owner_personal_name
 from apps.users.models import User
@@ -101,6 +102,7 @@ class TaskSearchResultSerializer(TaskOwnerEmployerMixin, serializers.ModelSerial
     owner_is_verified = serializers.SerializerMethodField()
     category_name = serializers.CharField(source='category.name', read_only=True)
     category_slug = serializers.CharField(source='category.slug', read_only=True)
+    listing_kind = serializers.SerializerMethodField()
     budget = serializers.DecimalField(source='budget_amount', max_digits=10, decimal_places=2, read_only=True)
     location = serializers.SerializerMethodField()
     bid_count = serializers.IntegerField(source='bids_count', read_only=True)
@@ -137,6 +139,9 @@ class TaskSearchResultSerializer(TaskOwnerEmployerMixin, serializers.ModelSerial
         label = ', '.join(p for p in parts if p)
         return label or obj.address or ''
 
+    def get_listing_kind(self, obj):
+        return get_listing_kind(obj.tags) or 'task'
+
     class Meta:
         model = Task
         fields = [
@@ -146,7 +151,7 @@ class TaskSearchResultSerializer(TaskOwnerEmployerMixin, serializers.ModelSerial
             'owner', 'owner_name', 'owner_username', 'owner_image',
             'owner_logo_url', 'owner_logo_text', 'owner_logo_color',
             'owner_business_name', 'owner_is_verified',
-            'category', 'category_name', 'category_slug',
+            'category', 'category_name', 'category_slug', 'listing_kind',
             'bid_count', 'distance', 'created_at', 'requirements',
         ]
 
