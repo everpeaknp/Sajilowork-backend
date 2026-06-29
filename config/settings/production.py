@@ -78,7 +78,11 @@ GOOGLE_OAUTH_REDIRECT_URI = config(
     default='https://sajiloworkbackend.everacy.com/api/v1/auth/google/callback/',
 )
 
-# Error monitoring (optional — set SENTRY_DSN in environment)
+# Production static files — use WhiteNoise without manifest hashing so admin
+# CSS/JS cannot 404 when the manifest is missing or out of date.
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+WHITENOISE_USE_FINDERS = False
+WHITENOISE_AUTOREFRESH = False
 SENTRY_DSN = config('SENTRY_DSN', default='')
 if SENTRY_DSN:
     import sentry_sdk

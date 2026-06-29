@@ -428,9 +428,9 @@ JAZZMIN_SETTINGS = {
     "site_title": "SajiloWork Admin",
     "site_header": "SajiloWork Administration",
     "site_brand": "SajiloWork",
-    "site_logo": None,
+    "site_logo": "vendor/adminlte/img/AdminLTELogo.png",
     "site_logo_classes": "img-circle",
-    "site_icon": None,
+    "site_icon": "vendor/adminlte/img/AdminLTELogo.png",
     "welcome_sign": "Welcome to SajiloWork Admin Panel",
     "copyright": "SajiloWork © 2024",
     
