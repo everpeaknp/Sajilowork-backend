@@ -96,12 +96,18 @@ def get_public_site_settings(site_id: int | None = None, request=None) -> dict:
     branding = get_site_branding(site_id)
 
     favicon_url = (branding.favicon_url or None) if branding else None
+    logo_url = (branding.logo_url or None) if branding else None
+    display_name_raw = (branding.display_name or '').strip() if branding else ''
+    site_name = resolve_public_site_name(site.name if site else '')
+    display_name = display_name_raw or site_name
     meta_description = ((branding.meta_description or '').strip() if branding else '') or DEFAULT_META_DESCRIPTION
     og_image_url = ((branding.og_image_url or '').strip() if branding else '') or _default_og_image_url()
 
     return {
-        'site_name': resolve_public_site_name(site.name if site else ''),
+        'site_name': site_name,
+        'display_name': display_name,
         'site_domain': resolve_public_site_domain(site.domain if site else ''),
+        'logo_url': logo_url,
         'favicon_url': favicon_url,
         'meta_description': meta_description,
         'og_image_url': og_image_url,

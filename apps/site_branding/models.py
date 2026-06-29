@@ -11,6 +11,19 @@ class SiteBranding(models.Model):
         on_delete=models.CASCADE,
         related_name='branding',
     )
+    display_name = models.CharField(
+        max_length=120,
+        blank=True,
+        default='',
+        help_text=_(
+            'Name shown in the site header and footer. Leave blank to use the Django site name above.'
+        ),
+    )
+    logo_url = models.URLField(
+        blank=True,
+        default='',
+        help_text=_('Cloudinary URL for the header/footer logo (PNG or SVG, ~200×48 recommended).'),
+    )
     favicon_url = models.URLField(
         blank=True,
         default='',

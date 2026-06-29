@@ -30,7 +30,9 @@ class SiteBrandingTests(TestCase):
 
         settings = get_public_site_settings(site.pk)
         self.assertEqual(settings['site_name'], 'Sajilowork')
+        self.assertEqual(settings['display_name'], 'Sajilowork')
         self.assertIsNone(settings['favicon_url'])
+        self.assertIsNone(settings['logo_url'])
         self.assertTrue(SiteBranding.objects.filter(site=site).exists())
 
     def test_placeholder_site_name_resolves_to_sajilowork(self):
@@ -98,3 +100,53 @@ class SiteBrandingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['site_name'], 'Sajilowork')
         self.assertIn('res.cloudinary.com', response.data['favicon_url'])
+
+    @override_settings(**CLOUDINARY_TEST_SETTINGS)
+    def test_admin_form_save_logo_upload(self):
+        site = Site.objects.get_current()
+        branding, _ = SiteBranding.objects.get_or_create(site=site)
+        branding.logo_url = ''
+        branding.save(update_fields=['logo_url'])
+
+        form = SiteAdminForm(
+            data={
+                'name': 'Sajilowork',
+                'domain': site.domain,
+                'display_name': 'SajiloWork',
+                'remove_logo': False,
+            },
+            files={
+                'logo': SimpleUploadedFile(
+                    'logo.png',
+                    b'\x89PNG\r\n\x1a\n\x00',
+                    content_type='image/png',
+                ),
+            },
+            instance=site,
+        )
+        with patch('apps.site_branding.admin.upload_file_to_cloudinary') as mock_upload:
+            mock_upload.return_value = {
+                'secure_url': 'https://res.cloudinary.com/test-cloud/image/upload/logo.png',
+            }
+            self.assertTrue(form.is_valid(), form.errors)
+            form.save(commit=False)
+
+        branding.refresh_from_db()
+        self.assertEqual(branding.display_name, 'SajiloWork')
+        self.assertEqual(
+            branding.logo_url,
+            'https://res.cloudinary.com/test-cloud/image/upload/logo.png',
+        )
+
+    def test_display_name_overrides_header_name_in_api(self):
+        site = Site.objects.get_current()
+        branding, _ = SiteBranding.objects.get_or_create(site=site)
+        branding.display_name = 'My Marketplace'
+        branding.save(update_fields=['display_name'])
+        site.name = 'Sajilowork SEO'
+        site.save()
+
+        response = self.client.get('/api/v1/site/settings/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['site_name'], 'Sajilowork SEO')
+        self.assertEqual(response.data['display_name'], 'My Marketplace')

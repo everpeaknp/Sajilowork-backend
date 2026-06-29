@@ -4,7 +4,11 @@ from django.contrib.sites.admin import SiteAdmin as DjangoSiteAdmin
 from django.contrib.sites.models import Site
 from django.utils.html import format_html
 
-from apps.uploads.cloudinary_folders import cloudinary_site_favicon_folder, cloudinary_site_og_folder
+from apps.uploads.cloudinary_folders import (
+    cloudinary_site_favicon_folder,
+    cloudinary_site_logo_folder,
+    cloudinary_site_og_folder,
+)
 from apps.uploads.cloudinary_utils import (
     cloudinary_server_upload_enabled,
     infer_cloudinary_resource_type,
@@ -44,6 +48,18 @@ def _upload_image_to_cloudinary(uploaded_file, *, folder: str, field_label: str)
 
 
 class SiteAdminForm(forms.ModelForm):
+    display_name = forms.CharField(
+        required=False,
+        max_length=120,
+        label='Header & footer name',
+        help_text='Shown in the navbar and footer. Leave blank to use the site name field.',
+    )
+    logo = forms.FileField(
+        required=False,
+        label='Site logo',
+        help_text='Upload PNG or SVG for the header and footer (~200×48 recommended). Stored on Cloudinary.',
+    )
+    remove_logo = forms.BooleanField(required=False, label='Remove current logo')
     favicon = forms.FileField(
         required=False,
         label='Site favicon',
@@ -81,11 +97,11 @@ class SiteAdminForm(forms.ModelForm):
         model = Site
         fields = ('name', 'domain')
         labels = {
-            'name': 'Site name',
+            'name': 'Site name (SEO & admin)',
             'domain': 'Site domain',
         }
         help_texts = {
-            'name': 'Displayed in browser tabs and shared metadata (e.g. Sajilowork).',
+            'name': 'Used in page titles, metadata, and as fallback when header & footer name is empty.',
             'domain': 'Primary domain for this site (e.g. www.sajilowork.com).',
         }
 
@@ -96,6 +112,7 @@ class SiteAdminForm(forms.ModelForm):
         branding = SiteBranding.objects.filter(site_id=self.instance.pk).first()
         if not branding:
             return
+        self.fields['display_name'].initial = branding.display_name
         self.fields['meta_description'].initial = branding.meta_description
         self.fields['twitter_handle'].initial = branding.twitter_handle
         self.fields['contact_email'].initial = branding.contact_email
@@ -120,6 +137,12 @@ class SiteAdminForm(forms.ModelForm):
             cleaned_data['domain'] = resolve_public_site_domain(domain_host)
 
         if not cloudinary_server_upload_enabled():
+            if cleaned_data.get('logo'):
+                self.add_error(
+                    'logo',
+                    'Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, '
+                    'CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.',
+                )
             if cleaned_data.get('favicon'):
                 self.add_error(
                     'favicon',
@@ -129,6 +152,15 @@ class SiteAdminForm(forms.ModelForm):
             if cleaned_data.get('og_image'):
                 self.add_error('og_image', 'Cloudinary is not configured for image uploads.')
             return cleaned_data
+
+        logo_file = cleaned_data.get('logo')
+        if logo_file:
+            try:
+                cleaned_data['logo_url'] = _upload_image_to_cloudinary(
+                    logo_file, folder=cloudinary_site_logo_folder(), field_label='Logo'
+                )
+            except forms.ValidationError as exc:
+                self.add_error('logo', exc)
 
         favicon_file = cleaned_data.get('favicon')
         if favicon_file:
@@ -160,6 +192,13 @@ class SiteAdminForm(forms.ModelForm):
         branding, _ = SiteBranding.objects.get_or_create(site=site)
         update_fields: list[str] = []
 
+        if self.cleaned_data.get('remove_logo'):
+            branding.logo_url = ''
+            update_fields.append('logo_url')
+        elif self.cleaned_data.get('logo_url'):
+            branding.logo_url = self.cleaned_data['logo_url']
+            update_fields.append('logo_url')
+
         if self.cleaned_data.get('remove_favicon'):
             branding.favicon_url = ''
             update_fields.append('favicon_url')
@@ -175,6 +214,7 @@ class SiteAdminForm(forms.ModelForm):
             update_fields.append('og_image_url')
 
         for field in (
+            'display_name',
             'meta_description',
             'twitter_handle',
             'contact_email',
@@ -192,19 +232,31 @@ class SiteAdminForm(forms.ModelForm):
 
 class SiteAdmin(DjangoSiteAdmin):
     form = SiteAdminForm
-    list_display = ('domain', 'name', 'has_favicon', 'has_og_image')
-    search_fields = ('domain', 'name')
-    readonly_fields = ('favicon_preview', 'og_image_preview')
+    list_display = ('domain', 'name', 'header_name', 'has_logo', 'has_favicon', 'has_og_image')
+    search_fields = ('domain', 'name', 'branding__display_name')
+    readonly_fields = ('logo_preview', 'favicon_preview', 'og_image_preview')
     fieldsets = (
         (
             'Site identity',
             {
                 'fields': ('name', 'domain'),
-                'description': 'Public site name and primary domain.',
+                'description': 'Core site record used for SEO metadata and Django sites framework.',
             },
         ),
         (
-            'Branding',
+            'Header & footer',
+            {
+                'fields': (
+                    'display_name',
+                    'logo_preview',
+                    'logo',
+                    'remove_logo',
+                ),
+                'description': 'Brand name and logo shown in the public navbar and footer.',
+            },
+        ),
+        (
+            'Icons & social preview',
             {
                 'fields': (
                     'favicon_preview',
@@ -232,6 +284,10 @@ class SiteAdmin(DjangoSiteAdmin):
         ),
     )
 
+    @admin.display(description='Current logo')
+    def logo_preview(self, obj):
+        return self._image_preview(obj, 'logo_url', height=48)
+
     @admin.display(description='Current favicon')
     def favicon_preview(self, obj):
         return self._image_preview(obj, 'favicon_url', height=48)
@@ -246,16 +302,30 @@ class SiteAdmin(DjangoSiteAdmin):
         branding = SiteBranding.objects.filter(site_id=obj.pk).first()
         url = getattr(branding, field, '') if branding else ''
         if url:
+            max_width = 320 if field == 'logo_url' else 240
             return format_html(
-                '<img src="{}" alt="Preview" style="height:{}px;max-width:240px;object-fit:contain;'
-                'border:1px solid #ddd;padding:4px;" />'
+                '<img src="{}" alt="Preview" style="height:{}px;max-width:{}px;object-fit:contain;'
+                'border:1px solid #ddd;padding:4px;background:#fff;" />'
                 '<div style="margin-top:6px;"><a href="{}" target="_blank" rel="noopener">{}</a></div>',
                 url,
                 height,
+                max_width,
                 url,
                 url,
             )
         return 'Not uploaded yet.'
+
+    @admin.display(description='Header name')
+    def header_name(self, obj):
+        branding = getattr(obj, 'branding', None)
+        if branding and branding.display_name:
+            return branding.display_name
+        return obj.name
+
+    @admin.display(boolean=True, description='Logo')
+    def has_logo(self, obj):
+        branding = getattr(obj, 'branding', None)
+        return bool(branding and branding.logo_url)
 
     @admin.display(boolean=True, description='Favicon')
     def has_favicon(self, obj):

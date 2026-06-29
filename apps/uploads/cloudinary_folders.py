@@ -104,5 +104,9 @@ def cloudinary_site_favicon_folder() -> str:
     return cloudinary_folder('Site', 'Favicon')
 
 
+def cloudinary_site_logo_folder() -> str:
+    return cloudinary_folder('Site', 'Logo')
+
+
 def cloudinary_site_og_folder() -> str:
     return cloudinary_folder('Site', 'OG')
