@@ -12,6 +12,13 @@ from apps.uploads.cloudinary_utils import (
     upload_file_to_cloudinary,
 )
 
+from apps.site_branding.services import (
+    PLACEHOLDER_SITE_DOMAINS,
+    PLACEHOLDER_SITE_NAMES,
+    resolve_public_site_domain,
+    resolve_public_site_name,
+)
+
 from .models import SiteBranding
 
 
@@ -98,6 +105,20 @@ class SiteAdminForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        name = (cleaned_data.get('name') or '').strip()
+        domain = (cleaned_data.get('domain') or '').strip().lower()
+        domain_host = domain.replace('https://', '').replace('http://', '').strip('/')
+
+        if name.lower() in PLACEHOLDER_SITE_NAMES or name.lower().startswith('localhost'):
+            cleaned_data['name'] = resolve_public_site_name(name)
+        if (
+            not domain_host
+            or domain_host in PLACEHOLDER_SITE_DOMAINS
+            or domain_host.startswith('localhost')
+            or domain_host.startswith('127.0.0.1')
+        ):
+            cleaned_data['domain'] = resolve_public_site_domain(domain_host)
+
         if not cloudinary_server_upload_enabled():
             if cleaned_data.get('favicon'):
                 self.add_error(

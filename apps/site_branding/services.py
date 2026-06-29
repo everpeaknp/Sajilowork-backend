@@ -8,7 +8,14 @@ PLACEHOLDER_SITE_DOMAINS = frozenset(
 )
 
 
-PLACEHOLDER_SITE_NAMES = frozenset({'example.com', 'example', 'localhost'})
+PLACEHOLDER_SITE_NAMES = frozenset({
+    'example.com',
+    'example',
+    'localhost',
+    'tasknepal',
+    'task nepal',
+    'airtasker',
+})
 
 DEFAULT_META_DESCRIPTION = (
     'Hire skilled taskers and freelancers in Nepal. Post tasks, find jobs, '

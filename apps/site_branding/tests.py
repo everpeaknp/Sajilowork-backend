@@ -42,6 +42,7 @@ class SiteBrandingTests(TestCase):
         settings = get_public_site_settings(site.pk)
         self.assertEqual(settings['site_name'], 'Sajilowork')
         self.assertEqual(resolve_public_site_name('example.com'), 'Sajilowork')
+        self.assertEqual(resolve_public_site_name('tasknepal'), 'Sajilowork')
         self.assertEqual(settings['site_domain'], 'www.sajilowork.com')
         self.assertTrue(settings['meta_description'])
         self.assertTrue(settings['og_image_url'])

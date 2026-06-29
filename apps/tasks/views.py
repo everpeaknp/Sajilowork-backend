@@ -7,7 +7,7 @@ from django.http import Http404
 from rest_framework import viewsets, status, filters, generics, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly, IsAdminUser
 from django.db import transaction
 from django.db.models import Prefetch, Q, Count, Avg, Sum
 from django.db import IntegrityError
@@ -68,7 +68,7 @@ class CategoryViewSet(
 
     def get_permissions(self):
         if self.action == 'create':
-            return [IsAuthenticated()]
+            return [IsAdminUser()]
         return [AllowAny()]
 
     def get_queryset(self):

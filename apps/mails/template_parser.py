@@ -201,7 +201,7 @@ class TemplateParser:
             # User variables
             'user_id': '123e4567-e89b-12d3-a456-426614174000',
             'user_name': 'John Doe',
-            'user_email': 'john.doe@example.com',
+            'user_email': 'john.doe@sajilowork.com',
             'user_first_name': 'John',
             'user_last_name': 'Doe',
             'user_phone': '+1234567890',
@@ -222,7 +222,7 @@ class TemplateParser:
             'bid_id': '789e0123-e89b-12d3-a456-426614174000',
             'bid_amount': '$750',
             'bidder_name': 'Jane Smith',
-            'bidder_email': 'jane.smith@example.com',
+            'bidder_email': 'jane.smith@sajilowork.com',
             'bid_message': 'I have 5 years of experience in web design...',
             'bid_deadline': 'January 25, 2024',
             'bid_url': 'https://airtasker.com/bids/789',
