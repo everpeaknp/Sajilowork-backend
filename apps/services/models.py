@@ -11,7 +11,8 @@ class ServiceQuerySet(models.QuerySet):
 
 
 class ServiceManager(models.Manager.from_queryset(ServiceQuerySet)):
-    pass
+    def get_queryset(self):
+        return filter_queryset_by_listing_kind(super().get_queryset(), LISTING_KIND_SERVICE)
 
 
 class Service(Task):
